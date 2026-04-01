@@ -2,6 +2,16 @@
 
 Nexora est un backend e-commerce open source en PHP, conçu comme un CMS headless pour piloter catalogue, contenu et opérations (checkout, paiements, commandes, CRM) via GraphQL et REST.
 
+![Version](https://img.shields.io/badge/version-1.0.0-2563eb)
+![PHP](https://img.shields.io/badge/PHP-%3E%3D8.2-777bb4?logo=php&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8%2B-4479a1?logo=mysql&logoColor=white)
+![GraphQL](https://img.shields.io/badge/GraphQL-API-e10098?logo=graphql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ed?logo=docker&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-16a34a)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088ff?logo=githubactions&logoColor=white)
+
+---
+
 ## About
 
 - **Produit**: CMS e-commerce headless orienté API
@@ -35,6 +45,15 @@ Nexora est un backend e-commerce open source en PHP, conçu comme un CMS headles
 Pour plus de détails: `docs/architecture.md`.
 
 ## Technologies
+
+### Labels techno
+
+![PHP](https://img.shields.io/badge/PHP-8.2+-777bb4?logo=php&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8+-4479a1?logo=mysql&logoColor=white)
+![GraphQL](https://img.shields.io/badge/GraphQL-webonyx/graphql--php-e10098?logo=graphql&logoColor=white)
+![Symfony](https://img.shields.io/badge/Symfony-HTTP_Foundation%20%7C%20Mailer-000000?logo=symfony&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white)
+![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088ff?logo=githubactions&logoColor=white)
 
 - PHP 8.2+
 - MySQL 8+
