@@ -25,7 +25,7 @@ $statements = [
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL
     )",
-    "CREATE TABLE IF NOT EXISTS cms_page_sections (
+    'CREATE TABLE IF NOT EXISTS cms_page_sections (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         page_id INT UNSIGNED NOT NULL,
         section_key VARCHAR(120) NOT NULL,
@@ -36,15 +36,15 @@ $statements = [
         updated_at DATETIME NOT NULL,
         UNIQUE KEY uniq_page_section (page_id, section_key),
         CONSTRAINT fk_cms_sections_page FOREIGN KEY (page_id) REFERENCES cms_pages(id) ON DELETE CASCADE
-    )",
-    "CREATE TABLE IF NOT EXISTS blog_categories (
+    )',
+    'CREATE TABLE IF NOT EXISTS blog_categories (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         slug VARCHAR(120) NOT NULL UNIQUE,
         name VARCHAR(120) NOT NULL,
         description TEXT NULL,
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL
-    )",
+    )',
     "CREATE TABLE IF NOT EXISTS blog_articles (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         category_id INT UNSIGNED NOT NULL,
@@ -63,7 +63,7 @@ $statements = [
         UNIQUE KEY uniq_blog_category_slug (category_id, slug),
         CONSTRAINT fk_blog_articles_category FOREIGN KEY (category_id) REFERENCES blog_categories(id) ON DELETE RESTRICT
     )",
-    "CREATE TABLE IF NOT EXISTS blog_article_blocks (
+    'CREATE TABLE IF NOT EXISTS blog_article_blocks (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         article_id INT UNSIGNED NOT NULL,
         block_type VARCHAR(80) NOT NULL,
@@ -72,14 +72,14 @@ $statements = [
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL,
         CONSTRAINT fk_blog_blocks_article FOREIGN KEY (article_id) REFERENCES blog_articles(id) ON DELETE CASCADE
-    )",
-    "CREATE TABLE IF NOT EXISTS faq_categories (
+    )',
+    'CREATE TABLE IF NOT EXISTS faq_categories (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         slug VARCHAR(120) NOT NULL UNIQUE,
         name VARCHAR(120) NOT NULL,
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL
-    )",
+    )',
     "CREATE TABLE IF NOT EXISTS faq_items (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         category_id INT UNSIGNED NULL,
@@ -134,6 +134,6 @@ try {
     }
     echo "CMS schema applique.\n";
 } catch (Throwable $e) {
-    fwrite(STDERR, "Echec schema CMS: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Echec schema CMS: ' . $e->getMessage() . "\n");
     exit(1);
 }

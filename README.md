@@ -1,145 +1,150 @@
 # Nexora CMS
 
-Nexora est un CMS e-commerce open source en PHP 8.2, sans framework lourd, avec API GraphQL et endpoints REST pour catalogue, CMS et administration.
+Nexora est un backend e-commerce open source en PHP, conçu comme un CMS headless pour piloter catalogue, contenu et opérations (checkout, paiements, commandes, CRM) via GraphQL et REST.
 
-## Stack
+## About
+
+- **Produit**: CMS e-commerce headless orienté API
+- **Positionnement**: léger, modulaire, lisible, prêt pour self-hosting
+- **Public cible**: équipes produit/tech qui veulent un backend PHP maîtrisable sans framework monolithique
+- **Nom du projet**: Nexora (`Nexora CMS`, `Nexora Core`)
+
+## Fonctionnalités clés
+
+- **CMS**: pages, blog, FAQ, contenus légaux, versions, scheduling, workflow admin
+- **E-commerce**: catalogue, variantes, catégories, panier, checkout, coupons, commandes
+- **Paiement**: orchestration Stripe/PayPal + webhooks + idempotence
+- **Ops**: migrations, backup/restore, preflight prod, smoke tests, release checks
+- **Sécurité**: JWT, CSRF admin, rate limit, headers HTTP, audit logs, CI security gates
+- **Extensibilité**: hooks applicatifs + registre de providers paiement
+
+## Use cases
+
+- Lancer une boutique headless (frontend Next.js, Nuxt, app mobile)
+- Centraliser contenu marketing + e-commerce dans une seule API
+- Construire une base open source auto-hébergée pour une stack sur mesure
+
+## Architecture (synthèse)
+
+- `src/Domain`: modèle métier
+- `src/Application`: cas d’usage/services
+- `src/Infrastructure`: HTTP, persistence PDO, paiement, sécurité, logging
+- `public`: entrypoints HTTP (`index.php`, webhooks, admin APIs)
+- `config` + `migrations`: schéma SQL et évolution DB
+
+Pour plus de détails: `docs/architecture.md`.
+
+## Technologies
 
 - PHP 8.2+
-- MySQL (compatible o2switch)
-- GraphQL via `webonyx/graphql-php`
-- Autoload PSR-4 (`App\\` -> `src/`)
-- PHPUnit (tests unitaires)
+- MySQL 8+
+- GraphQL (`webonyx/graphql-php`)
+- Symfony components (`http-foundation`, `mailer`)
+- Docker / Docker Compose (dev et prod)
+- GitHub Actions (lint, tests, analyse, security scans)
 
-## Démarrage rapide
+## Dépendances
 
-1. Installer les dépendances :
+### Runtime (`require`)
 
+- `ramsey/uuid`
+- `vlucas/phpdotenv`
+- `webonyx/graphql-php`
+- `symfony/http-foundation`
+- `symfony/mailer`
+- `monolog/monolog`
+- `stripe/stripe-php`
+
+### Développement (`require-dev`)
+
+- `phpunit/phpunit`
+- `phpstan/phpstan`
+- `friendsofphp/php-cs-fixer`
+
+## Scripts utiles
+
+- `composer test`
+- `composer test:coverage`
+- `composer coverage:check`
+- `composer analyse`
+- `composer format:check`
+- `composer security:audit`
+- `composer security:sast`
+
+## Installation rapide (local)
+
+1. Installer les dépendances:
 ```bash
 composer install
 ```
-
-2. Copier le fichier d'exemple d'environnement :
-
+2. Créer l’environnement local:
 ```bash
 cp .env.example .env
 ```
-
-3. Configurer la base de données et les clés API dans `.env` (fichier local non versionné).
-
-4. Créer la base si besoin et appliquer le schéma :
-
+3. Configurer la DB et les secrets dans `.env` (fichier local, non versionné).
+4. Initialiser la base:
 ```bash
 php bin/migrate.php --create-db
 ```
-
-5. Lancer un serveur de dev PHP :
-
+5. Lancer l’API:
 ```bash
 php -S localhost:8000 -t public
 ```
 
-6. Les endpoints seront disponibles sur :
-   - GraphQL : `http://localhost:8000/graphql`
-   - REST (utilisée par le front) : `http://localhost:8000/api/v1`
-   - CMS lecture : `http://localhost:8000/api/v1/pages/{slug}`, `/api/v1/articles`, `/api/v1/faq`, `/api/v1/legal/{slug}`
-   - CMS admin (header `X-Admin-Token`) : `/api/v1/admin/pages`, `/api/v1/admin/blog/articles`, `/api/v1/admin/faq/items`, `/api/v1/admin/legal/pages`
+Endpoints principaux:
+- GraphQL: `http://localhost:8000/graphql`
+- REST API: `http://localhost:8000/api/v1`
+- CMS lecture: `/api/v1/pages/{slug}`, `/api/v1/articles`, `/api/v1/faq`, `/api/v1/legal/{slug}`
+- CMS admin: `/api/v1/admin/*`
 
-## Démarrage Docker
+## Docker (dev vs prod)
 
+- **Dev uniquement**:
 ```bash
 docker compose up --build
 ```
+`docker-compose.yml` contient des secrets de démonstration et ne doit pas servir en production.
 
-Pour production, utiliser `docker-compose.prod.yml` et `.env.prod` (cf. `.env.prod.example`).
-Le fichier `docker-compose.yml` est strictement réservé au développement local (secrets de démonstration).
-
-## Migrations versionnées
-
-- Dossier des migrations SQL : `migrations/`
-- Exécuter les migrations incrémentales :
-
+- **Production**:
 ```bash
-php bin/migrate_versioned.php
+cp .env.prod.example .env.prod
+docker compose -f docker-compose.prod.yml up --build -d
 ```
 
-- Environnement déjà en place (baseline sans exécution SQL) :
+## Qualité, sécurité, release
 
-```bash
-php bin/migrate_versioned.php --baseline-current
-```
-
-## Imports et backfill
-
-- Import produits SEO :
-```bash
-php bin/import_seo_products.php --dry-run
-php bin/import_seo_products.php
-```
-
-- Import pages SEO :
-```bash
-php bin/import_seo_pages.php --dry-run
-php bin/import_seo_pages.php
-```
-
-- Backfill CMS :
-```bash
-php bin/backfill_cms_content.php --dry-run
-php bin/backfill_cms_content.php
-```
-
-## Smoke tests backend
-
-```bash
-php bin/smoke_test.php
-```
-
-## Preflight production
-
-Avant un déploiement, exécuter les vérifications de sécurité/configuration:
-
+- Tests: `phpunit.xml` + coverage gate
+- Analyse statique: PHPStan
+- Format: PHP CS Fixer
+- Security gates CI: audit dépendances, SAST, secret scan, container scan
+- Preflight prod:
 ```bash
 php bin/preflight_prod.php
 ```
-
-Ce script vérifie notamment:
-- variables d'environnement critiques présentes,
-- `APP_DEBUG=0`,
-- secrets non par défaut (`JWT_SECRET`, `ADMIN_API_TOKEN`),
-- connexion MySQL,
-- présence des tables e-commerce/CMS et de `schema_migrations`.
-
-## Release check (pipeline local)
-
+- Release check:
 ```bash
 php bin/release_check.php
 ```
 
-Ce script enchaîne:
-- lint PHP des scripts critiques,
-- preflight prod,
-- smoke test en mode dégradé (`--without-db`) si dépendances applicatives absentes.
+## Opérations
 
-## Tests
-
+- Migrations incrémentales:
 ```bash
-vendor/bin/phpunit --configuration phpunit.xml
+php bin/migrate_versioned.php
 ```
+- Baseline migrations:
+```bash
+php bin/migrate_versioned.php --baseline-current
+```
+- Backup / restore:
+  - `php bin/backup_db.php`
+  - `php bin/restore_db.php`
 
-## Structure des dossiers
+## Roadmap courte
 
-- `public/` : point d'entrée HTTP (`index.php`), assets back-office
-- `src/` : code applicatif (`Domain`, `Application`, `Infrastructure`, `Presentation`)
-- `config/` : configuration applicative
-- `var/` : logs, cache, fichiers temporaires
-
-## Frontend Next.js
-
-Le frontend Next.js consommera l'API via l'endpoint `/graphql` (POST). Le schéma est pensé pour :
-
-- Catalogue (produits, catégories)
-- Panier & checkout
-- Comptes clients
+- Stabiliser l’écosystème plugins/public API
+- Renforcer couverture de tests critiques
+- Continuer l’industrialisation sécurité et observabilité
 
 ## Open source
 
@@ -151,11 +156,11 @@ Le frontend Next.js consommera l'API via l'endpoint `/graphql` (POST). Le schém
 - Changelog: `CHANGELOG.md`
 - Roadmap: `ROADMAP.md`
 
-## Documentation technique
+## Documentation
 
 - Architecture: `docs/architecture.md`
 - Déploiement: `docs/deployment.md`
-- Release: `docs/release-process.md`
+- Release process: `docs/release-process.md`
 - Extensibilité: `docs/extensibility.md`
 - Versioning: `docs/versioning-policy.md`
 - Support: `docs/support.md`

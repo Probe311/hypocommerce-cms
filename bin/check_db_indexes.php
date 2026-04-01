@@ -18,10 +18,10 @@ $required = [
 $failures = 0;
 foreach ($required as $table => $indexes) {
     $stmt = $pdo->prepare(
-        "SELECT DISTINCT INDEX_NAME
+        'SELECT DISTINCT INDEX_NAME
          FROM INFORMATION_SCHEMA.STATISTICS
          WHERE TABLE_SCHEMA = DATABASE()
-           AND TABLE_NAME = :table_name"
+           AND TABLE_NAME = :table_name'
     );
     $stmt->execute(['table_name' => $table]);
     $existingRows = $stmt->fetchAll(PDO::FETCH_COLUMN);

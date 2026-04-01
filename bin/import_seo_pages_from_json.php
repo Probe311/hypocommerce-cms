@@ -238,6 +238,6 @@ try {
     if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    fwrite(STDERR, "Import SEO pages echec: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Import SEO pages echec: ' . $e->getMessage() . "\n");
     exit(1);
 }

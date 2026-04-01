@@ -148,8 +148,7 @@ final class PdoCmsRepository
         ?string $scheduledAt,
         ?string $reviewNote,
         array $sections
-    ): void
-    {
+    ): void {
         $now = (new \DateTimeImmutable())->format('Y-m-d H:i:s');
         $publishedAt = $status === 'published' ? $now : null;
         $reviewedAt = $status === 'in_review' ? $now : null;

@@ -31,4 +31,3 @@ final class LoggerFactory
         return $logger;
     }
 }
-

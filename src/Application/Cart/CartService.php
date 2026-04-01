@@ -118,96 +118,95 @@ final class CartService
         ?string $paymentMethod = null,
         ?string $couponCode = null,
         ?string $customerRef = null
-    ): array
-    {
+    ): array {
         $pdo = ConnectionFactory::getConnection();
         $pdo->beginTransaction();
         try {
-        $cart = $this->cartRepository->findBySessionId($sessionId);
-        if ($cart === null) {
-            throw new \RuntimeException('Cart not found');
-        }
-
-        $cartData = $this->toCartArray($cart->id(), $couponCode, $customerRef);
-        $items = [];
-        foreach ($cart->items() as $item) {
-            $product = $this->productRepository->findById($item->productId());
-            if ($product === null) {
-                continue;
+            $cart = $this->cartRepository->findBySessionId($sessionId);
+            if ($cart === null) {
+                throw new \RuntimeException('Cart not found');
             }
-            $items[] = new \App\Domain\Order\OrderItem(
-                0,
-                Uuid::uuid4(),
-                $item->productId(),
-                $item->variantId(),
-                $product->name(),
-                $item->quantity(),
-                $item->unitPrice(),
-                $item->total()
-            );
-        }
 
-        $orderId = Uuid::uuid4();
-        $order = $this->orderRepository->create(
-            $orderId,
-            'ORD-' . strtoupper(substr(str_replace('-', '', $orderId->toString()), 0, 10)),
-            $customerId !== null ? Uuid::fromString($customerId) : null,
-            $cartData['subTotal'],
-            $cartData['taxTotal'],
-            $cartData['shippingTotal'],
-            $cartData['discountTotal'],
-            $cartData['currency'],
-            $paymentMethod,
-            'standard',
-            $items
-        );
-
-        if ($shippingAddress !== null) {
-            $shippingAddressWithContact = $this->mergeAddressContact($shippingAddress, $contact);
-            $this->orderRepository->upsertOrderAddress($orderId, 'shipping', $shippingAddressWithContact);
-        }
-        if ($billingAddress !== null) {
-            $billingAddressWithContact = $this->mergeAddressContact($billingAddress, $contact);
-            $this->orderRepository->upsertOrderAddress($orderId, 'billing', $billingAddressWithContact);
-        }
-        if ($paymentMethod !== null && $paymentMethod !== '') {
-            $this->orderRepository->createOrderPayment(
-                $orderId,
-                $paymentMethod,
-                'pending-' . $orderId->toString(),
-                $cartData['total'],
-                'pending',
-                $contact
-            );
-        }
-        $this->orderRepository->createOrderShipment($orderId, null, 'pending');
-        $this->inventoryService->reserveForOrder($orderId->toString());
-        if (isset($cartData['coupon']) && is_array($cartData['coupon']) && ($cartData['coupon']['valid'] ?? false) === true) {
-            $couponId = (int) ($cartData['coupon']['couponId'] ?? 0);
-            if ($couponId > 0 && (float) $cartData['discountTotal'] > 0) {
-                $this->couponService->recordRedemption(
-                    $couponId,
-                    $orderId->toString(),
-                    $customerRef,
-                    (float) $cartData['discountTotal']
+            $cartData = $this->toCartArray($cart->id(), $couponCode, $customerRef);
+            $items = [];
+            foreach ($cart->items() as $item) {
+                $product = $this->productRepository->findById($item->productId());
+                if ($product === null) {
+                    continue;
+                }
+                $items[] = new \App\Domain\Order\OrderItem(
+                    0,
+                    Uuid::uuid4(),
+                    $item->productId(),
+                    $item->variantId(),
+                    $product->name(),
+                    $item->quantity(),
+                    $item->unitPrice(),
+                    $item->total()
                 );
             }
-        }
 
-        $result = [
-            'id' => $order->id()->toString(),
-            'number' => $order->number(),
-            'status' => $order->status(),
-        ];
-        $contactEmail = isset($contact['email']) ? trim((string) $contact['email']) : '';
-        if ($contactEmail !== '') {
-            $this->transactionalEmailService->send('order_created', $contactEmail, [
-                'order_id' => $order->id()->toString(),
-                'order_number' => $order->number(),
-            ]);
-        }
-        $pdo->commit();
-        return $result;
+            $orderId = Uuid::uuid4();
+            $order = $this->orderRepository->create(
+                $orderId,
+                'ORD-' . strtoupper(substr(str_replace('-', '', $orderId->toString()), 0, 10)),
+                $customerId !== null ? Uuid::fromString($customerId) : null,
+                $cartData['subTotal'],
+                $cartData['taxTotal'],
+                $cartData['shippingTotal'],
+                $cartData['discountTotal'],
+                $cartData['currency'],
+                $paymentMethod,
+                'standard',
+                $items
+            );
+
+            if ($shippingAddress !== null) {
+                $shippingAddressWithContact = $this->mergeAddressContact($shippingAddress, $contact);
+                $this->orderRepository->upsertOrderAddress($orderId, 'shipping', $shippingAddressWithContact);
+            }
+            if ($billingAddress !== null) {
+                $billingAddressWithContact = $this->mergeAddressContact($billingAddress, $contact);
+                $this->orderRepository->upsertOrderAddress($orderId, 'billing', $billingAddressWithContact);
+            }
+            if ($paymentMethod !== null && $paymentMethod !== '') {
+                $this->orderRepository->createOrderPayment(
+                    $orderId,
+                    $paymentMethod,
+                    'pending-' . $orderId->toString(),
+                    $cartData['total'],
+                    'pending',
+                    $contact
+                );
+            }
+            $this->orderRepository->createOrderShipment($orderId, null, 'pending');
+            $this->inventoryService->reserveForOrder($orderId->toString());
+            if (isset($cartData['coupon']) && is_array($cartData['coupon']) && ($cartData['coupon']['valid'] ?? false) === true) {
+                $couponId = (int) ($cartData['coupon']['couponId'] ?? 0);
+                if ($couponId > 0 && (float) $cartData['discountTotal'] > 0) {
+                    $this->couponService->recordRedemption(
+                        $couponId,
+                        $orderId->toString(),
+                        $customerRef,
+                        (float) $cartData['discountTotal']
+                    );
+                }
+            }
+
+            $result = [
+                'id' => $order->id()->toString(),
+                'number' => $order->number(),
+                'status' => $order->status(),
+            ];
+            $contactEmail = isset($contact['email']) ? trim((string) $contact['email']) : '';
+            if ($contactEmail !== '') {
+                $this->transactionalEmailService->send('order_created', $contactEmail, [
+                    'order_id' => $order->id()->toString(),
+                    'order_number' => $order->number(),
+                ]);
+            }
+            $pdo->commit();
+            return $result;
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -297,4 +296,3 @@ final class CartService
         return $address;
     }
 }
-

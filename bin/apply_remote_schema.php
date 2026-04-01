@@ -47,6 +47,6 @@ try {
     $pdo->exec($sql);
     fwrite(STDOUT, "Schema applied successfully.\n");
 } catch (Throwable $e) {
-    fwrite(STDERR, "Schema apply failed: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Schema apply failed: ' . $e->getMessage() . "\n");
     exit(1);
 }

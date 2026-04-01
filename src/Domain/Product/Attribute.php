@@ -28,4 +28,3 @@ final class Attribute
         return $this->slug;
     }
 }
-

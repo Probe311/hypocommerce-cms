@@ -771,10 +771,10 @@ final class CmsAdminController
         $limit = max(1, min(200, (int) ($payload['limit'] ?? 50)));
         $offset = max(0, (int) ($payload['offset'] ?? 0));
 
-        $sql = "SELECT cs.customer_id, cs.segment_code, cs.score, cs.computed_at, c.email, c.first_name, c.last_name
+        $sql = 'SELECT cs.customer_id, cs.segment_code, cs.score, cs.computed_at, c.email, c.first_name, c.last_name
                 FROM customer_segments cs
                 INNER JOIN customers c ON c.id = cs.customer_id
-                WHERE 1=1";
+                WHERE 1=1';
         $params = [];
         if ($segment !== '') {
             $sql .= ' AND cs.segment_code = :segment';

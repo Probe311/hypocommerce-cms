@@ -114,6 +114,6 @@ try {
     if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    fwrite(STDERR, "Echec enrichissement pages marques: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Echec enrichissement pages marques: ' . $e->getMessage() . "\n");
     exit(1);
 }

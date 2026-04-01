@@ -39,7 +39,6 @@ try {
     $pdo->exec($sql);
     fwrite(STDOUT, "Database schema applied successfully.\n");
 } catch (Throwable $e) {
-    fwrite(STDERR, "Error applying schema: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Error applying schema: ' . $e->getMessage() . "\n");
     exit(1);
 }
-

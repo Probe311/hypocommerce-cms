@@ -94,10 +94,10 @@ $blogArticles = [
 try {
     if ($dryRun) {
         echo "Dry-run: aucune ecriture en base.\n";
-        echo "pages=" . count($pages) . "\n";
-        echo "faq_items=" . count($faqItems) . "\n";
-        echo "legal_pages=" . count($legalPages) . "\n";
-        echo "blog_articles=" . count($blogArticles) . "\n";
+        echo 'pages=' . count($pages) . "\n";
+        echo 'faq_items=' . count($faqItems) . "\n";
+        echo 'legal_pages=' . count($legalPages) . "\n";
+        echo 'blog_articles=' . count($blogArticles) . "\n";
         exit(0);
     }
 
@@ -238,14 +238,14 @@ try {
     $pdo->commit();
 
     echo "CMS backfill termine.\n";
-    echo "pages=" . count($pages) . "\n";
-    echo "faq_items=" . count($faqItems) . "\n";
-    echo "legal_pages=" . count($legalPages) . "\n";
-    echo "blog_articles=" . count($blogArticles) . "\n";
+    echo 'pages=' . count($pages) . "\n";
+    echo 'faq_items=' . count($faqItems) . "\n";
+    echo 'legal_pages=' . count($legalPages) . "\n";
+    echo 'blog_articles=' . count($blogArticles) . "\n";
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    fwrite(STDERR, "Backfill echec: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Backfill echec: ' . $e->getMessage() . "\n");
     exit(1);
 }

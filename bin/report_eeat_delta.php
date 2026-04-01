@@ -30,8 +30,8 @@ try {
     $metrics['brand_pages_total'] = (int) $pdo->query("SELECT COUNT(*) FROM cms_pages WHERE template='marque' OR slug LIKE '%army-painter%' OR slug LIKE '%marque-%'")->fetchColumn();
     $metrics['brand_pages_with_eeat_positioning'] = (int) $pdo->query("SELECT COUNT(DISTINCT page_id) FROM cms_page_sections WHERE section_key='eeat_positioning'")->fetchColumn();
     $metrics['brand_pages_with_eeat_trust'] = (int) $pdo->query("SELECT COUNT(DISTINCT page_id) FROM cms_page_sections WHERE section_key='eeat_trust'")->fetchColumn();
-    $metrics['cms_pages_total'] = (int) $pdo->query("SELECT COUNT(*) FROM cms_pages")->fetchColumn();
-    $metrics['cms_sections_total'] = (int) $pdo->query("SELECT COUNT(*) FROM cms_page_sections")->fetchColumn();
+    $metrics['cms_pages_total'] = (int) $pdo->query('SELECT COUNT(*) FROM cms_pages')->fetchColumn();
+    $metrics['cms_sections_total'] = (int) $pdo->query('SELECT COUNT(*) FROM cms_page_sections')->fetchColumn();
 
     $sampleProducts = $pdo->query(
         "SELECT sku, name, LEFT(description, 180) AS description_preview, seo_title, seo_description
@@ -77,6 +77,6 @@ try {
     }
     fwrite(STDOUT, "output: {$outputPath}\n");
 } catch (Throwable $e) {
-    fwrite(STDERR, "Echec rapport EEAT: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Echec rapport EEAT: ' . $e->getMessage() . "\n");
     exit(1);
 }

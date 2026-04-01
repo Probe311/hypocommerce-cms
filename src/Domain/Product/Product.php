@@ -66,4 +66,3 @@ final class Product
         return $this->type;
     }
 }
-

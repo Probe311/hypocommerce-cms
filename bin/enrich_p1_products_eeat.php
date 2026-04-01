@@ -46,23 +46,23 @@ function buildMarketingDescription(array $row, array $tpl): string
 {
     $name = (string) ($row['name'] ?? 'Ce pack');
     $lines = [];
-    $lines[] = $name . " - " . (string) ($tpl['usp'] ?? '');
-    $lines[] = "";
-    $lines[] = "Benefices cles:";
+    $lines[] = $name . ' - ' . (string) ($tpl['usp'] ?? '');
+    $lines[] = '';
+    $lines[] = 'Benefices cles:';
     $benefits = isset($tpl['benefits']) && is_array($tpl['benefits']) ? $tpl['benefits'] : [];
     foreach ($benefits as $benefit) {
-        $lines[] = "- " . (string) $benefit;
+        $lines[] = '- ' . (string) $benefit;
     }
-    $lines[] = "";
-    $lines[] = "Usage recommande:";
+    $lines[] = '';
+    $lines[] = 'Usage recommande:';
     $lines[] = (string) ($tpl['usage_block'] ?? '');
-    $lines[] = "";
-    $lines[] = "Confiance & transparence:";
+    $lines[] = '';
+    $lines[] = 'Confiance & transparence:';
     $lines[] = (string) ($tpl['trust_block'] ?? '');
     $faq = isset($tpl['faq']) && is_array($tpl['faq']) ? $tpl['faq'] : [];
     if ($faq !== []) {
-        $lines[] = "";
-        $lines[] = "FAQ:";
+        $lines[] = '';
+        $lines[] = 'FAQ:';
         foreach ($faq as $item) {
             if (!is_array($item)) {
                 continue;
@@ -131,14 +131,14 @@ try {
 
         $newSeoTitle = $existingSeoTitle;
         if ($existingSeoTitle === '') {
-            $newSeoTitle = mb_substr((string) $product['name'] . " | Pack peinture figurines", 0, 255);
+            $newSeoTitle = mb_substr((string) $product['name'] . ' | Pack peinture figurines', 0, 255);
             $stats['updated_seo']++;
         }
 
         $newSeoDescription = $existingSeoDescription;
         if ($existingSeoDescription === '') {
             $newSeoDescription = mb_substr(
-                "Pack prioritaire orienté resultat: gain de temps, workflow clair et rendu lisible en contexte de jeu.",
+                'Pack prioritaire orienté resultat: gain de temps, workflow clair et rendu lisible en contexte de jeu.',
                 0,
                 255
             );
@@ -163,6 +163,6 @@ try {
     if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    fwrite(STDERR, "Echec enrichissement P1: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Echec enrichissement P1: ' . $e->getMessage() . "\n");
     exit(1);
 }

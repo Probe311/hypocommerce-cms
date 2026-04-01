@@ -50,6 +50,6 @@ try {
         echo "- {$row['slug']} | {$row['template']} | {$row['meta_title']}\n";
     }
 } catch (Throwable $e) {
-    fwrite(STDERR, "Check failed: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Check failed: ' . $e->getMessage() . "\n");
     exit(1);
 }

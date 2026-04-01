@@ -17,4 +17,3 @@ interface ProductRepository
      */
     public function search(?string $query, int $limit = 20, int $offset = 0): array;
 }
-

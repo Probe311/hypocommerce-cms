@@ -30,4 +30,3 @@ final class AppConfig
         return sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $db);
     }
 }
-

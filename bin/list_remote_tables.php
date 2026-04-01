@@ -25,6 +25,6 @@ try {
         echo $table . PHP_EOL;
     }
 } catch (Throwable $e) {
-    fwrite(STDERR, "Unable to list tables: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Unable to list tables: ' . $e->getMessage() . "\n");
     exit(1);
 }

@@ -41,6 +41,6 @@ try {
     echo 'duplicate_page_slugs=' . $dupePageSlug . PHP_EOL;
     echo 'duplicate_blog_slugs=' . $dupeBlogSlug . PHP_EOL;
 } catch (Throwable $e) {
-    fwrite(STDERR, "Check failed: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Check failed: ' . $e->getMessage() . "\n");
     exit(1);
 }

@@ -42,4 +42,3 @@ final class ProductImage
         return $this->position;
     }
 }
-

@@ -34,4 +34,3 @@ final class AttributeValue
         return $this->slug;
     }
 }
-

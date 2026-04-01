@@ -95,7 +95,7 @@ try {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    fwrite(STDERR, "Versioned migration failed: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Versioned migration failed: ' . $e->getMessage() . "\n");
     exit(1);
 } finally {
     try {

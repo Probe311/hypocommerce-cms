@@ -35,6 +35,6 @@ try {
         echo "- {$row['sku']} | {$row['name']} | {$row['slug']} | {$row['price']}\n";
     }
 } catch (Throwable $e) {
-    fwrite(STDERR, "Check failed: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Check failed: ' . $e->getMessage() . "\n");
     exit(1);
 }

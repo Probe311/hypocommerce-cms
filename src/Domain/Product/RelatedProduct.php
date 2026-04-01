@@ -30,4 +30,3 @@ final class RelatedProduct
         return $this->type;
     }
 }
-

@@ -171,9 +171,9 @@ if ($rows === []) {
 try {
     if ($dryRun) {
         fwrite(STDOUT, "Dry-run: aucune ecriture en base.\n");
-        fwrite(STDOUT, "Source rows: " . count($decoded) . "\n");
-        fwrite(STDOUT, "Rows valides: " . count($rows) . "\n");
-        fwrite(STDOUT, "Rows rejetees: " . count($rejected) . "\n");
+        fwrite(STDOUT, 'Source rows: ' . count($decoded) . "\n");
+        fwrite(STDOUT, 'Rows valides: ' . count($rows) . "\n");
+        fwrite(STDOUT, 'Rows rejetees: ' . count($rejected) . "\n");
         exit(0);
     }
 
@@ -215,9 +215,9 @@ try {
     $dupSlug = (int) $pdo->query('SELECT COUNT(*) FROM (SELECT slug FROM products GROUP BY slug HAVING COUNT(*) > 1) d')->fetchColumn();
 
     fwrite(STDOUT, "Import termine.\n");
-    fwrite(STDOUT, "Source rows: " . count($decoded) . "\n");
-    fwrite(STDOUT, "Rows valides: " . count($rows) . "\n");
-    fwrite(STDOUT, "Rows rejetees: " . count($rejected) . "\n");
+    fwrite(STDOUT, 'Source rows: ' . count($decoded) . "\n");
+    fwrite(STDOUT, 'Rows valides: ' . count($rows) . "\n");
+    fwrite(STDOUT, 'Rows rejetees: ' . count($rejected) . "\n");
     fwrite(STDOUT, "Products en base: {$countProducts}\n");
     fwrite(STDOUT, "Products publies: {$countPublished}\n");
     fwrite(STDOUT, "Duplicats SKU: {$dupSku}\n");
@@ -237,6 +237,6 @@ try {
         } catch (Throwable) {
         }
     }
-    fwrite(STDERR, "Import echec: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Import echec: ' . $e->getMessage() . "\n");
     exit(1);
 }

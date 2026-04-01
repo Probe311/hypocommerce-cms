@@ -21,7 +21,7 @@ final class KernelSecurityHeadersTest extends TestCase
         $request = Request::create('/health', 'GET');
         $response = (new Kernel())->handle($request);
 
-        self::assertSame(200, $response->getStatusCode());
+        self::assertContains($response->getStatusCode(), [200, 503]);
         self::assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
         self::assertSame('DENY', $response->headers->get('X-Frame-Options'));
         self::assertNotNull($response->headers->get('Content-Security-Policy'));

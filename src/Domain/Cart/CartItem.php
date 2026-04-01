@@ -54,4 +54,3 @@ final class CartItem
         return $this->total;
     }
 }
-

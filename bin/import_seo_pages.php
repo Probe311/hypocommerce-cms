@@ -258,8 +258,8 @@ try {
     if ($dryRun) {
         $inScope = array_map(static fn (array $row): string => $row['slug'], $rows);
         fwrite(STDOUT, "Dry-run: aucune ecriture en base.\n");
-        fwrite(STDOUT, "Rows prepares: " . count($rows) . "\n");
-        fwrite(STDOUT, "Slugs importables: " . implode(', ', $inScope) . "\n");
+        fwrite(STDOUT, 'Rows prepares: ' . count($rows) . "\n");
+        fwrite(STDOUT, 'Slugs importables: ' . implode(', ', $inScope) . "\n");
         exit(0);
     }
 
@@ -288,13 +288,13 @@ try {
     $count = (int) $pdo->query("SELECT COUNT(*) FROM pages WHERE slug IN ({$quoted})")->fetchColumn();
 
     fwrite(STDOUT, "Import pages termine.\n");
-    fwrite(STDOUT, "Rows prepares: " . count($rows) . "\n");
+    fwrite(STDOUT, 'Rows prepares: ' . count($rows) . "\n");
     fwrite(STDOUT, "Rows en base: {$count}\n");
-    fwrite(STDOUT, "Slugs importes: " . implode(', ', $inScope) . "\n");
+    fwrite(STDOUT, 'Slugs importes: ' . implode(', ', $inScope) . "\n");
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    fwrite(STDERR, "Import echec: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Import echec: ' . $e->getMessage() . "\n");
     exit(1);
 }

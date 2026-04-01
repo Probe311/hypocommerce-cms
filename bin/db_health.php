@@ -11,10 +11,10 @@ try {
         throw new RuntimeException('No health row returned.');
     }
     fwrite(STDOUT, "DB connection OK\n");
-    fwrite(STDOUT, "database=" . (string) ($row['db_name'] ?? 'unknown') . "\n");
-    fwrite(STDOUT, "mysql_version=" . (string) ($row['mysql_version'] ?? 'unknown') . "\n");
-    fwrite(STDOUT, "timestamp=" . (string) ($row['now_ts'] ?? 'unknown') . "\n");
+    fwrite(STDOUT, 'database=' . (string) ($row['db_name'] ?? 'unknown') . "\n");
+    fwrite(STDOUT, 'mysql_version=' . (string) ($row['mysql_version'] ?? 'unknown') . "\n");
+    fwrite(STDOUT, 'timestamp=' . (string) ($row['now_ts'] ?? 'unknown') . "\n");
 } catch (Throwable $e) {
-    fwrite(STDERR, "DB connection failed: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'DB connection failed: ' . $e->getMessage() . "\n");
     exit(1);
 }

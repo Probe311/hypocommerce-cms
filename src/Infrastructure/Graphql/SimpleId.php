@@ -10,4 +10,3 @@ final class SimpleId extends ScalarType
 {
     public string $name = 'ID';
 }
-

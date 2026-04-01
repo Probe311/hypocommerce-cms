@@ -78,9 +78,9 @@ try {
     );
 
     fwrite(STDOUT, "Detection P1 terminee.\n");
-    fwrite(STDOUT, "count: " . count($p1) . "\n");
+    fwrite(STDOUT, 'count: ' . count($p1) . "\n");
     fwrite(STDOUT, "output: {$outputPath}\n");
 } catch (Throwable $e) {
-    fwrite(STDERR, "Echec detection P1: " . $e->getMessage() . "\n");
+    fwrite(STDERR, 'Echec detection P1: ' . $e->getMessage() . "\n");
     exit(1);
 }

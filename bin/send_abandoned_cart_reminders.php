@@ -11,7 +11,7 @@ $mailer = new TransactionalEmailService();
 $now = new DateTimeImmutable();
 $threshold = $now->modify('-2 hours')->format('Y-m-d H:i:s');
 
-$sql = "SELECT c.id AS cart_id, c.customer_id, cu.email,
+$sql = 'SELECT c.id AS cart_id, c.customer_id, cu.email,
                SUM(ci.quantity) AS items_count,
                COALESCE(SUM(ci.total), 0) AS cart_total
         FROM carts c
@@ -21,7 +21,7 @@ $sql = "SELECT c.id AS cart_id, c.customer_id, cu.email,
         WHERE c.created_at <= :threshold
           AND r.id IS NULL
           AND cu.email IS NOT NULL
-        GROUP BY c.id, c.customer_id, cu.email";
+        GROUP BY c.id, c.customer_id, cu.email';
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute(['threshold' => $threshold]);
@@ -56,4 +56,4 @@ foreach ((array) $rows as $row) {
     }
 }
 
-fwrite(STDOUT, "Abandoned cart reminders processed: " . count((array) $rows) . ", sent: {$sent}\n");
+fwrite(STDOUT, 'Abandoned cart reminders processed: ' . count((array) $rows) . ", sent: {$sent}\n");
