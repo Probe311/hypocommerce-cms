@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "templates": {
+    "marque": {
+      "positioning": "Cette marque est selectionnee pour sa regularite en atelier, sa lisibilite sur table et sa capacite a accelerer les workflows sans compromettre la qualite visuelle globale.",
+      "use_cases": [
+        "Constituer une base solide pour peindre une armee complete rapidement.",
+        "Ameliorer la coherence couleur entre unites et personnages.",
+        "Standardiser une methode reproductible sur plusieurs projets."
+      ],
+      "compatibility": "Compatible avec les workflows pinceau classiques et les pratiques de vernissage/protection en fin de session.",
+      "trust": "Les recommandations sont basees sur des usages pratiques en contexte hobby: temps de pose, lisibilite a distance de jeu et stabilite du rendu.",
+      "cta": "Voir la selection recommandee de la marque"
+    },
+    "fiche_produit_p1": {
+      "usp": "Pack prioritaire pour gagner du temps de mise en peinture avec une courbe d apprentissage accessible.",
+      "benefits": [
+        "Acceleration du passage sous-couche -> table de jeu",
+        "Palette plus coherente pour limiter les achats disperses",
+        "Meilleure reproductibilite du rendu sur des series de figurines"
+      ],
+      "usage_block": "Ideal pour demarrer ou industrialiser un schema de peinture, avec une logique orientee resultat visible rapidement.",
+      "trust_block": "Aucune promesse technique non verifiee n est ajoutee: les donnees produit restent strictement alignees sur les informations disponibles.",
+      "faq": [
+        {
+          "q": "Ce pack convient-il a un debutant ?",
+          "a": "Oui, il est pense pour reduire la complexite initiale et structurer les premieres sessions."
+        },
+        {
+          "q": "Peut-on l utiliser sur plusieurs projets ?",
+          "a": "Oui, la logique bundle/palette le rend pertinent pour plusieurs unites ou factions."
+        }
+      ]
+    }
+  }
+}

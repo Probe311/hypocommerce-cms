@@ -1,0 +1,47 @@
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ecommerce
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  app:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    environment:
+      # Dev-only defaults. Never reuse in production.
+      APP_ENV: dev
+      APP_DEBUG: 1
+      APP_URL: http://localhost:8000
+      APP_SECRET: change-me-app-secret
+      CORS_ALLOW_ORIGIN: http://localhost:3000
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ecommerce
+      DB_USER: app
+      DB_PASSWORD: app
+      JWT_SECRET: change-me
+      ADMIN_API_TOKEN: change-me-admin-token
+      MAILER_DSN: smtp://localhost
+      STRIPE_SECRET_KEY: sk_test_xxxx
+      STRIPE_WEBHOOK_SECRET: whsec_xxxx
+      PAYPAL_CLIENT_ID: your_client_id
+      PAYPAL_CLIENT_SECRET: your_client_secret
+    volumes:
+      - ./:/app
+    command: >
+      sh -c "composer install --no-interaction --prefer-dist &&
+             php bin/migrate.php --create-db &&
+             php -S 0.0.0.0:8000 -t public"
+
+volumes:
+  db_data:
