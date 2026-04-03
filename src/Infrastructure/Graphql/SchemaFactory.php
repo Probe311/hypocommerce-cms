@@ -17,6 +17,8 @@ use App\Infrastructure\Persistence\PdoOrderRepository;
 use App\Infrastructure\Persistence\PdoCatalogApiRepository;
 use App\Infrastructure\Persistence\PdoCouponRepository;
 use App\Infrastructure\Persistence\PdoNewsletterRepository;
+use App\Infrastructure\Persistence\PdoEeatRepository;
+use App\Infrastructure\Persistence\PdoCmsV2Repository;
 use App\Infrastructure\Persistence\PdoProductRepository;
 use App\Infrastructure\Security\RateLimiter;
 use GraphQL\Type\Definition\ObjectType;
@@ -34,6 +36,8 @@ final class SchemaFactory
         $couponRepository = new PdoCouponRepository();
         $newsletterRepository = new PdoNewsletterRepository();
         $idempotencyRepository = new PdoIdempotencyRepository();
+        $eeatRepository = new PdoEeatRepository();
+        $cmsV2Repository = new PdoCmsV2Repository();
         $paymentOrchestrator = new PaymentOrchestrator();
         $shippingService = new ShippingService();
         $customerAuthService = new CustomerAuthService();
@@ -184,6 +188,209 @@ final class SchemaFactory
                         $token = $validator->requireNonEmptyString($args, 'customerToken', 'invalid_customer_token');
                         $customerId = $customerAuthService->verifyCustomerToken($token);
                         return $customerProfileService->addresses($customerId);
+                    },
+                ],
+                'eeatScores' => [
+                    'type' => Types::listOf(Types::eeatScore()),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'entityType' => Types::string(),
+                        'limit' => Types::int(),
+                        'offset' => Types::int(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        $limit = isset($args['limit']) ? max(1, min(500, (int) $args['limit'])) : 100;
+                        $offset = isset($args['offset']) ? max(0, (int) $args['offset']) : 0;
+                        $entityType = isset($args['entityType']) ? trim((string) $args['entityType']) : null;
+                        return $eeatRepository->listScores($limit, $offset, $entityType !== '' ? $entityType : null);
+                    },
+                ],
+                'eeatScore' => [
+                    'type' => Types::eeatScore(),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'entityType' => Types::string(),
+                        'entityId' => Types::string(),
+                        'locale' => Types::string(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $validator, $eeatRepository) {
+                        $assertAdmin($args, 'admin');
+                        $entityType = $validator->requireNonEmptyString($args, 'entityType', 'invalid_entity_type');
+                        $entityId = $validator->requireNonEmptyString($args, 'entityId', 'invalid_entity_id');
+                        $locale = $validator->optionalTrimmedString($args, 'locale') ?? 'fr';
+                        return $eeatRepository->getScore($entityType, $entityId, $locale);
+                    },
+                ],
+                'eeatOverview' => [
+                    'type' => Types::eeatOverview(),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        return $eeatRepository->overviewStats();
+                    },
+                ],
+                'eeatOpportunities' => [
+                    'type' => Types::listOf(Types::eeatOpportunity()),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'entityType' => Types::string(),
+                        'limit' => Types::int(),
+                        'offset' => Types::int(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        $limit = isset($args['limit']) ? max(1, min(500, (int) $args['limit'])) : 100;
+                        $offset = isset($args['offset']) ? max(0, (int) $args['offset']) : 0;
+                        $entityType = isset($args['entityType']) ? trim((string) $args['entityType']) : null;
+                        return $eeatRepository->listOpportunities($limit, $offset, $entityType !== '' ? $entityType : null);
+                    },
+                ],
+                'eeatQuickWins' => [
+                    'type' => Types::listOf(Types::eeatQuickWin()),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'entityType' => Types::string(),
+                        'limit' => Types::int(),
+                        'offset' => Types::int(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        $limit = isset($args['limit']) ? max(1, min(500, (int) $args['limit'])) : 100;
+                        $offset = isset($args['offset']) ? max(0, (int) $args['offset']) : 0;
+                        $entityType = isset($args['entityType']) ? trim((string) $args['entityType']) : null;
+                        return $eeatRepository->listQuickWins($limit, $offset, $entityType !== '' ? $entityType : null);
+                    },
+                ],
+                'eeatProgress' => [
+                    'type' => Types::eeatProgress(),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        return $eeatRepository->progressStats();
+                    },
+                ],
+                'eeatRunTrends' => [
+                    'type' => Types::listOf(Types::eeatRunTrend()),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'limit' => Types::int(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        $limit = isset($args['limit']) ? max(1, min(100, (int) $args['limit'])) : 20;
+                        return $eeatRepository->runTrends($limit);
+                    },
+                ],
+                'eeatRecommendationOwners' => [
+                    'type' => Types::listOf(Types::eeatOwnerBucket()),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        return $eeatRepository->listRecommendationOwners();
+                    },
+                ],
+                'eeatOverdueRecommendations' => [
+                    'type' => Types::listOf(Types::eeatRecommendation()),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'owner' => Types::string(),
+                        'limit' => Types::int(),
+                        'offset' => Types::int(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $validator, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        $owner = $validator->optionalTrimmedString($args, 'owner');
+                        $limit = isset($args['limit']) ? max(1, min(500, (int) $args['limit'])) : 100;
+                        $offset = isset($args['offset']) ? max(0, (int) $args['offset']) : 0;
+                        return $eeatRepository->listOverdueRecommendations($limit, $offset, $owner !== '' ? $owner : null);
+                    },
+                ],
+                'eeatSla' => [
+                    'type' => Types::eeatSla(),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        return $eeatRepository->slaStats();
+                    },
+                ],
+                'eeatCriticalOverdue' => [
+                    'type' => Types::listOf(Types::eeatRecommendation()),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'limit' => Types::int(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        $limit = isset($args['limit']) ? max(1, min(500, (int) $args['limit'])) : 100;
+                        return $eeatRepository->listCriticalOverdue($limit);
+                    },
+                ],
+                'eeatDueSoonRecommendations' => [
+                    'type' => Types::listOf(Types::eeatRecommendation()),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'owner' => Types::string(),
+                        'days' => Types::int(),
+                        'limit' => Types::int(),
+                        'offset' => Types::int(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $validator, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        $owner = $validator->optionalTrimmedString($args, 'owner');
+                        $days = isset($args['days']) ? max(1, min(30, (int) $args['days'])) : 3;
+                        $limit = isset($args['limit']) ? max(1, min(500, (int) $args['limit'])) : 100;
+                        $offset = isset($args['offset']) ? max(0, (int) $args['offset']) : 0;
+                        return $eeatRepository->listDueSoonRecommendations($days, $limit, $offset, $owner !== '' ? $owner : null);
+                    },
+                ],
+                'eeatDigest' => [
+                    'type' => Types::eeatDigest(),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'days' => Types::int(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        $days = isset($args['days']) ? max(1, min(30, (int) $args['days'])) : 3;
+                        return $eeatRepository->digestStats($days);
+                    },
+                ],
+                'cmsArticles' => [
+                    'type' => Types::listOf(Types::cmsArticle()),
+                    'args' => [
+                        'categorySlug' => Types::string(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($cmsV2Repository): array {
+                        $categorySlug = isset($args['categorySlug']) ? trim((string) $args['categorySlug']) : null;
+                        return $cmsV2Repository->listPublishedArticles($categorySlug !== '' ? $categorySlug : null);
+                    },
+                ],
+                'cmsArticleCategories' => [
+                    'type' => Types::listOf(Types::cmsCategory()),
+                    'resolve' => static function () use ($cmsV2Repository): array {
+                        return $cmsV2Repository->listPublishedCategories();
+                    },
+                ],
+                'cmsNavigation' => [
+                    'type' => Types::listOf(Types::cmsNavItem()),
+                    'args' => [
+                        'location' => Types::string(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($cmsV2Repository, $validator): array {
+                        $location = strtolower($validator->optionalTrimmedString($args, 'location') ?? 'header');
+                        if (!in_array($location, ['header', 'footer', 'secondary'], true)) {
+                            $location = 'header';
+                        }
+                        return $cmsV2Repository->listActiveMenu($location);
                     },
                 ],
             ],
@@ -523,8 +730,8 @@ final class SchemaFactory
                             throw new \RuntimeException('rate_limited');
                         }
                         $email = $validator->requireEmail($args, 'email', 'invalid_email');
-                        // Return token now for integration testing; email transport can be wired afterwards.
-                        return $customerAuthService->requestPasswordReset($email);
+                        $customerAuthService->requestPasswordReset($email);
+                        return 'ok';
                     },
                 ],
                 'resetPassword' => [
@@ -741,6 +948,61 @@ final class SchemaFactory
                         $assertAdmin($args, 'super_admin');
                         $key = $validator->requireNonEmptyString($args, 'key', 'invalid_key');
                         return $adminMutationRepository->deleteSetting($key) ? 'ok' : 'not_found';
+                    },
+                ],
+                'eeatUpdateRecommendationStatus' => [
+                    'type' => Types::string(),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'id' => Types::int(),
+                        'status' => Types::string(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $validator, $eeatRepository): string {
+                        $assertAdmin($args, 'admin');
+                        $id = $validator->requireIntGreaterThanZero($args, 'id', 'invalid_id');
+                        $status = $validator->requireNonEmptyString($args, 'status', 'invalid_status');
+                        $ok = $eeatRepository->updateRecommendationStatus($id, $status);
+                        return $ok ? 'ok' : 'invalid_status_or_not_found';
+                    },
+                ],
+                'eeatAssignRecommendation' => [
+                    'type' => Types::string(),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'id' => Types::int(),
+                        'owner' => Types::string(),
+                        'dueDate' => Types::string(),
+                        'note' => Types::string(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $validator, $eeatRepository): string {
+                        $assertAdmin($args, 'admin');
+                        $id = $validator->requireIntGreaterThanZero($args, 'id', 'invalid_id');
+                        $payload = [
+                            'owner' => $validator->optionalTrimmedString($args, 'owner'),
+                            'dueDate' => $validator->optionalTrimmedString($args, 'dueDate'),
+                            'note' => $validator->optionalTrimmedString($args, 'note'),
+                        ];
+                        $ok = $eeatRepository->updateRecommendationAssignment($id, $payload);
+                        return $ok ? 'ok' : 'assignment_update_failed';
+                    },
+                ],
+                'eeatAutoPrioritizeCriticalOverdue' => [
+                    'type' => Types::eeatAutoPrioritizeResult(),
+                    'args' => [
+                        'adminToken' => Types::string(),
+                        'dryRun' => Types::string(),
+                        'limit' => Types::int(),
+                    ],
+                    'resolve' => static function ($root, array $args) use ($assertAdmin, $validator, $eeatRepository): array {
+                        $assertAdmin($args, 'admin');
+                        $dryRaw = strtolower($validator->optionalTrimmedString($args, 'dryRun') ?? 'true');
+                        $dryRun = !in_array($dryRaw, ['0', 'false', 'no'], true);
+                        $limit = isset($args['limit']) ? max(1, min(500, (int) $args['limit'])) : 100;
+                        $result = $eeatRepository->autoPrioritizeCriticalOverdue($dryRun, $limit);
+                        return [
+                            'dryRun' => $result['dryRun'] ? 'true' : 'false',
+                            'updated' => (int) ($result['updated'] ?? 0),
+                        ];
                     },
                 ],
             ],

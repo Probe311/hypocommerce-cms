@@ -38,8 +38,8 @@ Application disponible sur `http://localhost:8000`.
 
 ## Séparation dev / prod (obligatoire)
 
-- `docker-compose.yml` est **dev-only** (debug actif, secrets faibles).
-- Pour production, utilisez `docker-compose.prod.yml` + `.env.prod` (voir `.env.prod.example`).
+- `docker-compose.yml` est **dev-only** (debug actif, secrets faibles) et sert surtout de reference pour un setup local ou CI.
+- Pour production, utilisez `docker-compose.prod.yml` + `.env.prod` (voir `.env.prod.example`) ou un orchestrateur externe (Kubernetes, ECS, etc.).
 - Ne jamais exposer les endpoints admin sans filtrage réseau.
 - Utiliser un reverse proxy TLS (Nginx/Traefik/Caddy) avec HSTS activé.
 - Exécuter le conteneur applicatif en utilisateur non-root.

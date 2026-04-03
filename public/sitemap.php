@@ -21,14 +21,28 @@ if ($baseUrl === '') {
 
 $urls = [];
 
-// Products
-$stmt = $pdo->query('SELECT slug, updated_at FROM products WHERE status = "published"');
+// Products (URL alignee sur le front: /boutique/{categorie}/{slug})
+$stmt = $pdo->query(
+    "SELECT p.slug, p.updated_at,
+        COALESCE((
+            SELECT pc.slug
+            FROM product_category_pivot pcp
+            INNER JOIN product_categories pc ON pc.id = pcp.category_id
+            WHERE pcp.product_id = p.id
+            ORDER BY pc.id ASC
+            LIMIT 1
+        ), 'non-classe') AS category_slug
+     FROM products p
+     WHERE p.status = 'published'"
+);
 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
     if (!is_array($row)) {
         continue;
     }
+    $cat = rawurlencode((string) ($row['category_slug'] ?? 'non-classe'));
+    $slug = rawurlencode((string) $row['slug']);
     $urls[] = [
-        'loc' => $baseUrl . '/produit/' . (string) $row['slug'],
+        'loc' => $baseUrl . '/boutique/' . $cat . '/' . $slug,
         'lastmod' => (string) ($row['updated_at'] ?? ''),
     ];
 }
@@ -40,7 +54,7 @@ while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         continue;
     }
     $urls[] = [
-        'loc' => $baseUrl . '/boutique/categorie/' . (string) $row['slug'],
+        'loc' => $baseUrl . '/boutique/' . rawurlencode((string) $row['slug']),
         'lastmod' => '',
     ];
 }

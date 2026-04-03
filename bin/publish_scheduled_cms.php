@@ -4,16 +4,37 @@ declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
 
-$pdo = pdoFromArgv($argv);
-$now = (new DateTimeImmutable())->format('Y-m-d H:i:s');
+use App\Infrastructure\Database\ConnectionFactory;
 
-$stmt = $pdo->prepare(
-    "UPDATE cms_pages
-     SET status = 'published', published_at = :now, updated_at = :now
-     WHERE status = 'scheduled'
-       AND scheduled_at IS NOT NULL
-       AND scheduled_at <= :now"
-);
-$stmt->execute(['now' => $now]);
+try {
+    pdoFromArgv($argv);
+    $pdo = ConnectionFactory::getConnection();
+    $now = (new DateTimeImmutable())->format('Y-m-d H:i:s');
 
-fwrite(STDOUT, sprintf("Scheduled pages published: %d\n", $stmt->rowCount()));
+    $pageStmt = $pdo->prepare(
+        "UPDATE cms_pages
+         SET status = 'published', published_at = :now, updated_at = :now
+         WHERE status = 'scheduled' AND scheduled_at IS NOT NULL AND scheduled_at <= :now"
+    );
+    $pageStmt->execute(['now' => $now]);
+    $pagesPublished = $pageStmt->rowCount();
+
+    $articleStmt = $pdo->prepare(
+        "UPDATE blog_articles
+         SET status = 'published', published_at = :now, updated_at = :now
+         WHERE status = 'draft' AND published_at IS NOT NULL AND published_at <= :now"
+    );
+    $articleStmt->execute(['now' => $now]);
+    $articlesPublished = $articleStmt->rowCount();
+
+    fwrite(STDOUT, json_encode([
+        'ok' => true,
+        'publishedPages' => $pagesPublished,
+        'publishedArticles' => $articlesPublished,
+        'executedAt' => $now,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+    exit(0);
+} catch (Throwable $e) {
+    fwrite(STDERR, json_encode(['ok' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+    exit(1);
+}

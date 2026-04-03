@@ -74,4 +74,42 @@ final class PdoWebhookEventRepository
             'event_id' => $eventId,
         ]);
     }
+
+    public function isProcessed(string $provider, string $eventId): bool
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT status
+             FROM webhook_events
+             WHERE provider = :provider AND event_id = :event_id
+             LIMIT 1'
+        );
+        $stmt->execute([
+            'provider' => strtolower(trim($provider)),
+            'event_id' => trim($eventId),
+        ]);
+        $status = $stmt->fetchColumn();
+        return is_string($status) && strtolower($status) === 'processed';
+    }
+
+    /**
+     * @return list<array<string,mixed>>
+     */
+    public function listRecentByProvider(string $provider, int $limit = 10): array
+    {
+        $provider = strtolower(trim($provider));
+        $limit = max(1, min(50, $limit));
+        $stmt = $this->pdo->prepare(
+            'SELECT event_id, event_type, status, attempt_count, last_error, updated_at
+             FROM webhook_events
+             WHERE provider = :provider
+             ORDER BY updated_at DESC
+             LIMIT :limit'
+        );
+        $stmt->bindValue('provider', $provider);
+        $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        /** @var list<array<string,mixed>> $rows */
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $rows;
+    }
 }

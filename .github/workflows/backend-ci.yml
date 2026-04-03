@@ -4,14 +4,20 @@ on:
   push:
     paths:
       - "**.php"
+      - "bin/**"
+      - "migrations/**"
       - "composer.json"
       - "phpunit.xml"
+      - "config/schema.sql"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
       - "**.php"
+      - "bin/**"
+      - "migrations/**"
       - "composer.json"
       - "phpunit.xml"
+      - "config/schema.sql"
       - ".github/workflows/backend-ci.yml"
 
 jobs:
@@ -123,3 +129,55 @@ jobs:
           severity: "CRITICAL,HIGH"
           ignore-unfixed: true
           exit-code: "1"
+
+  seo-gate:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: ecommerce
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare backend env
+        run: |
+          cp .env.example .env
+          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/^DB_PORT=.*/DB_PORT=3306/' .env
+          sed -i 's/^DB_NAME=.*/DB_NAME=ecommerce/' .env
+          sed -i 's/^DB_USER=.*/DB_USER=root/' .env
+          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=root/' .env
+          sed -i 's/^APP_ENV=.*/APP_ENV=test/' .env
+          sed -i 's/^APP_DEBUG=.*/APP_DEBUG=0/' .env
+          sed -i 's/^JWT_SECRET=.*/JWT_SECRET=ci-jwt-secret-1234567890/' .env
+          sed -i 's/^ADMIN_API_TOKEN=.*/ADMIN_API_TOKEN=ci-admin-token-1234567890/' .env
+
+      - name: Run migrations
+        run: php bin/migrate_versioned.php
+
+      - name: Ensure SEO defaults
+        run: php bin/ensure_seo_defaults.php
+
+      - name: Run SEO quality gate
+        run: php bin/seo_quality_gate.php

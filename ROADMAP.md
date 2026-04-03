@@ -1,4 +1,4 @@
-# Roadmap Nexora
+# Roadmap Hypocommerce CMS
 
 ## v0.2
 
@@ -14,3 +14,9 @@
 
 - Release stable OSS avec documentation complète exploitant/dev.
 - Politique de versioning et deprecation appliquée.
+
+## v1.1
+
+- Durcissement sécurité low-risk (erreurs API, webhooks, healthcheck, JWT, migrations).
+- Alignement de la documentation backend/frontend sur le naming Hypocommerce CMS.
+- Clarification des références API (CMS canonique `/api/v1/cms/*`, compat legacy explicite).

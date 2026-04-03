@@ -138,6 +138,74 @@ final class PdoOrderRepository
         ]);
     }
 
+    /**
+     * @return array{provider_ref:string,status:string,raw_payload:array<string,mixed>|null}|null
+     */
+    public function findLatestOrderPaymentByProvider(UuidInterface $orderId, string $provider): ?array
+    {
+        $provider = strtolower(trim($provider));
+        if ($provider === '') {
+            return null;
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT provider_ref, status, raw_payload
+             FROM order_payments
+             WHERE order_id = :order_id AND provider = :provider
+             ORDER BY created_at DESC
+             LIMIT 1'
+        );
+        $stmt->execute([
+            'order_id' => $orderId->toString(),
+            'provider' => $provider,
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) {
+            return null;
+        }
+        $raw = null;
+        if (isset($row['raw_payload']) && is_string($row['raw_payload']) && $row['raw_payload'] !== '') {
+            $decoded = json_decode($row['raw_payload'], true);
+            if (is_array($decoded)) {
+                $raw = $decoded;
+            }
+        }
+        return [
+            'provider_ref' => (string) ($row['provider_ref'] ?? ''),
+            'status' => (string) ($row['status'] ?? ''),
+            'raw_payload' => $raw,
+        ];
+    }
+
+    /**
+     * @param array<string,mixed>|null $rawPayload
+     */
+    public function updatePaymentStatusByProviderRef(
+        string $provider,
+        string $providerRef,
+        string $status,
+        ?array $rawPayload = null
+    ): bool {
+        $provider = strtolower(trim($provider));
+        $providerRef = trim($providerRef);
+        if ($provider === '' || $providerRef === '') {
+            return false;
+        }
+        $rawPayloadJson = $rawPayload !== null ? json_encode($rawPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null;
+        $stmt = $this->pdo->prepare(
+            'UPDATE order_payments
+             SET status = :status, raw_payload = :raw_payload
+             WHERE provider = :provider AND provider_ref = :provider_ref'
+        );
+        $stmt->execute([
+            'status' => $status,
+            'raw_payload' => $rawPayloadJson === false ? null : $rawPayloadJson,
+            'provider' => $provider,
+            'provider_ref' => $providerRef,
+        ]);
+
+        return $stmt->rowCount() > 0;
+    }
+
     public function createOrderShipment(UuidInterface $orderId, ?string $carrier, string $status): void
     {
         $stmt = $this->pdo->prepare(

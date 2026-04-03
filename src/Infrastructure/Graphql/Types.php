@@ -24,6 +24,28 @@ final class Types
     private static ?ObjectType $customerAddress = null;
     private static ?ObjectType $customerAuthPayload = null;
     private static ?ObjectType $category = null;
+    private static ?ObjectType $eeatRecommendation = null;
+    private static ?ObjectType $eeatScore = null;
+    private static ?ObjectType $cmsArticle = null;
+    private static ?ObjectType $cmsCategory = null;
+    private static ?ObjectType $cmsNavItem = null;
+    private static ?ObjectType $eeatOverviewSummary = null;
+    private static ?ObjectType $eeatOverviewEntityType = null;
+    private static ?ObjectType $eeatOverviewRule = null;
+    private static ?ObjectType $eeatOverviewSeverity = null;
+    private static ?ObjectType $eeatOverview = null;
+    private static ?ObjectType $eeatOpportunity = null;
+    private static ?ObjectType $eeatQuickWin = null;
+    private static ?ObjectType $eeatRecommendationStatus = null;
+    private static ?ObjectType $eeatScoreEvolution = null;
+    private static ?ObjectType $eeatProgress = null;
+    private static ?ObjectType $eeatRunTrend = null;
+    private static ?ObjectType $eeatOwnerBucket = null;
+    private static ?ObjectType $eeatSlaSummary = null;
+    private static ?ObjectType $eeatSlaOwner = null;
+    private static ?ObjectType $eeatSla = null;
+    private static ?ObjectType $eeatAutoPrioritizeResult = null;
+    private static ?ObjectType $eeatDigest = null;
 
     public static function string(): ScalarType
     {
@@ -246,5 +268,385 @@ final class Types
         }
 
         return self::$category;
+    }
+
+    public static function eeatRecommendation(): ObjectType
+    {
+        if (self::$eeatRecommendation === null) {
+            self::$eeatRecommendation = new ObjectType([
+                'name' => 'EeatRecommendation',
+                'fields' => [
+                    'rule_code' => ['type' => Type::nonNull(self::string())],
+                    'severity' => ['type' => Type::nonNull(self::string())],
+                    'impact' => ['type' => Type::nonNull(self::string())],
+                    'effort' => ['type' => Type::nonNull(self::string())],
+                    'message' => ['type' => Type::nonNull(self::string())],
+                    'fix_suggestion' => ['type' => Type::nonNull(self::string())],
+                    'status' => ['type' => Type::nonNull(self::string())],
+                    'owner' => ['type' => self::string()],
+                    'due_date' => ['type' => self::string()],
+                    'note' => ['type' => self::string()],
+                    'last_status_change_at' => ['type' => self::string()],
+                ],
+            ]);
+        }
+
+        return self::$eeatRecommendation;
+    }
+
+    public static function eeatScore(): ObjectType
+    {
+        if (self::$eeatScore === null) {
+            self::$eeatScore = new ObjectType([
+                'name' => 'EeatScore',
+                'fields' => [
+                    'entity_type' => ['type' => Type::nonNull(self::string())],
+                    'entity_id' => ['type' => Type::nonNull(self::string())],
+                    'entity_slug' => ['type' => self::string()],
+                    'locale' => ['type' => Type::nonNull(self::string())],
+                    'score_global' => ['type' => Type::nonNull(self::float())],
+                    'score_experience' => ['type' => Type::nonNull(self::float())],
+                    'score_expertise' => ['type' => Type::nonNull(self::float())],
+                    'score_authoritativeness' => ['type' => Type::nonNull(self::float())],
+                    'score_trust' => ['type' => Type::nonNull(self::float())],
+                    'grade' => ['type' => Type::nonNull(self::string())],
+                    'blockers_count' => ['type' => Type::nonNull(self::int())],
+                    'computed_at' => ['type' => Type::nonNull(self::string())],
+                    'recommendations' => ['type' => Type::nonNull(self::listOf(self::eeatRecommendation()))],
+                ],
+            ]);
+        }
+
+        return self::$eeatScore;
+    }
+
+    public static function cmsArticle(): ObjectType
+    {
+        if (self::$cmsArticle === null) {
+            self::$cmsArticle = new ObjectType([
+                'name' => 'CmsArticle',
+                'fields' => [
+                    'id' => ['type' => self::int()],
+                    'slug' => ['type' => Type::nonNull(self::string())],
+                    'title' => ['type' => Type::nonNull(self::string())],
+                    'excerpt' => ['type' => self::string()],
+                    'body' => ['type' => Type::nonNull(self::string())],
+                    'category_slug' => ['type' => Type::nonNull(self::string())],
+                    'category_name' => ['type' => Type::nonNull(self::string())],
+                    'featured_media_url' => ['type' => self::string()],
+                    'published_at' => ['type' => self::string()],
+                ],
+            ]);
+        }
+        return self::$cmsArticle;
+    }
+
+    public static function cmsCategory(): ObjectType
+    {
+        if (self::$cmsCategory === null) {
+            self::$cmsCategory = new ObjectType([
+                'name' => 'CmsCategory',
+                'fields' => [
+                    'id' => ['type' => self::int()],
+                    'parent_id' => ['type' => self::int()],
+                    'slug' => ['type' => Type::nonNull(self::string())],
+                    'name' => ['type' => Type::nonNull(self::string())],
+                    'description' => ['type' => self::string()],
+                    'meta_title' => ['type' => self::string()],
+                    'meta_description' => ['type' => self::string()],
+                ],
+            ]);
+        }
+        return self::$cmsCategory;
+    }
+
+    public static function cmsNavItem(): ObjectType
+    {
+        if (self::$cmsNavItem === null) {
+            self::$cmsNavItem = new ObjectType([
+                'name' => 'CmsNavItem',
+                'fields' => [
+                    'id' => ['type' => self::int()],
+                    'parent_id' => ['type' => self::int()],
+                    'label' => ['type' => Type::nonNull(self::string())],
+                    'target_type' => ['type' => Type::nonNull(self::string())],
+                    'target_ref' => ['type' => Type::nonNull(self::string())],
+                    'icon' => ['type' => self::string()],
+                    'order_index' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$cmsNavItem;
+    }
+
+    public static function eeatOverviewSummary(): ObjectType
+    {
+        if (self::$eeatOverviewSummary === null) {
+            self::$eeatOverviewSummary = new ObjectType([
+                'name' => 'EeatOverviewSummary',
+                'fields' => [
+                    'total' => ['type' => Type::nonNull(self::int())],
+                    'averageScore' => ['type' => Type::nonNull(self::float())],
+                    'totalBlockers' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatOverviewSummary;
+    }
+
+    public static function eeatOverviewEntityType(): ObjectType
+    {
+        if (self::$eeatOverviewEntityType === null) {
+            self::$eeatOverviewEntityType = new ObjectType([
+                'name' => 'EeatOverviewEntityType',
+                'fields' => [
+                    'entity_type' => ['type' => Type::nonNull(self::string())],
+                    'total' => ['type' => Type::nonNull(self::int())],
+                    'avg_score' => ['type' => Type::nonNull(self::float())],
+                ],
+            ]);
+        }
+        return self::$eeatOverviewEntityType;
+    }
+
+    public static function eeatOverviewRule(): ObjectType
+    {
+        if (self::$eeatOverviewRule === null) {
+            self::$eeatOverviewRule = new ObjectType([
+                'name' => 'EeatOverviewRule',
+                'fields' => [
+                    'rule_code' => ['type' => Type::nonNull(self::string())],
+                    'severity' => ['type' => Type::nonNull(self::string())],
+                    'total' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatOverviewRule;
+    }
+
+    public static function eeatOverviewSeverity(): ObjectType
+    {
+        if (self::$eeatOverviewSeverity === null) {
+            self::$eeatOverviewSeverity = new ObjectType([
+                'name' => 'EeatOverviewSeverity',
+                'fields' => [
+                    'severity' => ['type' => Type::nonNull(self::string())],
+                    'total' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatOverviewSeverity;
+    }
+
+    public static function eeatOverview(): ObjectType
+    {
+        if (self::$eeatOverview === null) {
+            self::$eeatOverview = new ObjectType([
+                'name' => 'EeatOverview',
+                'fields' => [
+                    'summary' => ['type' => Type::nonNull(self::eeatOverviewSummary())],
+                    'byEntityType' => ['type' => Type::nonNull(self::listOf(self::eeatOverviewEntityType()))],
+                    'topRules' => ['type' => Type::nonNull(self::listOf(self::eeatOverviewRule()))],
+                    'severityBreakdown' => ['type' => Type::nonNull(self::listOf(self::eeatOverviewSeverity()))],
+                ],
+            ]);
+        }
+        return self::$eeatOverview;
+    }
+
+    public static function eeatOpportunity(): ObjectType
+    {
+        if (self::$eeatOpportunity === null) {
+            self::$eeatOpportunity = new ObjectType([
+                'name' => 'EeatOpportunity',
+                'fields' => [
+                    'entity_type' => ['type' => Type::nonNull(self::string())],
+                    'entity_id' => ['type' => Type::nonNull(self::string())],
+                    'entity_slug' => ['type' => self::string()],
+                    'score_global' => ['type' => Type::nonNull(self::float())],
+                    'grade' => ['type' => Type::nonNull(self::string())],
+                    'blockers_count' => ['type' => Type::nonNull(self::int())],
+                    'recommendation_count' => ['type' => Type::nonNull(self::int())],
+                    'priority_score' => ['type' => Type::nonNull(self::float())],
+                    'computed_at' => ['type' => Type::nonNull(self::string())],
+                ],
+            ]);
+        }
+        return self::$eeatOpportunity;
+    }
+
+    public static function eeatQuickWin(): ObjectType
+    {
+        if (self::$eeatQuickWin === null) {
+            self::$eeatQuickWin = new ObjectType([
+                'name' => 'EeatQuickWin',
+                'fields' => [
+                    'entity_type' => ['type' => Type::nonNull(self::string())],
+                    'entity_id' => ['type' => Type::nonNull(self::string())],
+                    'entity_slug' => ['type' => self::string()],
+                    'score_global' => ['type' => Type::nonNull(self::float())],
+                    'grade' => ['type' => Type::nonNull(self::string())],
+                    'blockers_count' => ['type' => Type::nonNull(self::int())],
+                    'recommendation_count' => ['type' => Type::nonNull(self::int())],
+                    'high_impact_count' => ['type' => Type::nonNull(self::int())],
+                    'low_effort_count' => ['type' => Type::nonNull(self::int())],
+                    'computed_at' => ['type' => Type::nonNull(self::string())],
+                ],
+            ]);
+        }
+        return self::$eeatQuickWin;
+    }
+
+    public static function eeatRecommendationStatus(): ObjectType
+    {
+        if (self::$eeatRecommendationStatus === null) {
+            self::$eeatRecommendationStatus = new ObjectType([
+                'name' => 'EeatRecommendationStatus',
+                'fields' => [
+                    'open' => ['type' => Type::nonNull(self::int())],
+                    'in_progress' => ['type' => Type::nonNull(self::int())],
+                    'done' => ['type' => Type::nonNull(self::int())],
+                    'dismissed' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatRecommendationStatus;
+    }
+
+    public static function eeatScoreEvolution(): ObjectType
+    {
+        if (self::$eeatScoreEvolution === null) {
+            self::$eeatScoreEvolution = new ObjectType([
+                'name' => 'EeatScoreEvolution',
+                'fields' => [
+                    'improved' => ['type' => Type::nonNull(self::int())],
+                    'degraded' => ['type' => Type::nonNull(self::int())],
+                    'stable' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatScoreEvolution;
+    }
+
+    public static function eeatProgress(): ObjectType
+    {
+        if (self::$eeatProgress === null) {
+            self::$eeatProgress = new ObjectType([
+                'name' => 'EeatProgress',
+                'fields' => [
+                    'recommendationStatus' => ['type' => Type::nonNull(self::eeatRecommendationStatus())],
+                    'scoreEvolution' => ['type' => Type::nonNull(self::eeatScoreEvolution())],
+                ],
+            ]);
+        }
+        return self::$eeatProgress;
+    }
+
+    public static function eeatRunTrend(): ObjectType
+    {
+        if (self::$eeatRunTrend === null) {
+            self::$eeatRunTrend = new ObjectType([
+                'name' => 'EeatRunTrend',
+                'fields' => [
+                    'id' => ['type' => Type::nonNull(self::int())],
+                    'run_type' => ['type' => Type::nonNull(self::string())],
+                    'status' => ['type' => Type::nonNull(self::string())],
+                    'started_at' => ['type' => Type::nonNull(self::string())],
+                    'ended_at' => ['type' => self::string()],
+                ],
+            ]);
+        }
+        return self::$eeatRunTrend;
+    }
+
+    public static function eeatOwnerBucket(): ObjectType
+    {
+        if (self::$eeatOwnerBucket === null) {
+            self::$eeatOwnerBucket = new ObjectType([
+                'name' => 'EeatOwnerBucket',
+                'fields' => [
+                    'owner' => ['type' => Type::nonNull(self::string())],
+                    'status' => ['type' => Type::nonNull(self::string())],
+                    'total' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatOwnerBucket;
+    }
+
+    public static function eeatSlaSummary(): ObjectType
+    {
+        if (self::$eeatSlaSummary === null) {
+            self::$eeatSlaSummary = new ObjectType([
+                'name' => 'EeatSlaSummary',
+                'fields' => [
+                    'totalRecommendations' => ['type' => Type::nonNull(self::int())],
+                    'overdueTotal' => ['type' => Type::nonNull(self::int())],
+                    'overdueCritical' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatSlaSummary;
+    }
+
+    public static function eeatSlaOwner(): ObjectType
+    {
+        if (self::$eeatSlaOwner === null) {
+            self::$eeatSlaOwner = new ObjectType([
+                'name' => 'EeatSlaOwner',
+                'fields' => [
+                    'owner' => ['type' => Type::nonNull(self::string())],
+                    'total' => ['type' => Type::nonNull(self::int())],
+                    'overdue_total' => ['type' => Type::nonNull(self::int())],
+                    'overdue_critical' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatSlaOwner;
+    }
+
+    public static function eeatSla(): ObjectType
+    {
+        if (self::$eeatSla === null) {
+            self::$eeatSla = new ObjectType([
+                'name' => 'EeatSla',
+                'fields' => [
+                    'summary' => ['type' => Type::nonNull(self::eeatSlaSummary())],
+                    'byOwner' => ['type' => Type::nonNull(self::listOf(self::eeatSlaOwner()))],
+                ],
+            ]);
+        }
+        return self::$eeatSla;
+    }
+
+    public static function eeatAutoPrioritizeResult(): ObjectType
+    {
+        if (self::$eeatAutoPrioritizeResult === null) {
+            self::$eeatAutoPrioritizeResult = new ObjectType([
+                'name' => 'EeatAutoPrioritizeResult',
+                'fields' => [
+                    'dryRun' => ['type' => Type::nonNull(self::string())],
+                    'updated' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatAutoPrioritizeResult;
+    }
+
+    public static function eeatDigest(): ObjectType
+    {
+        if (self::$eeatDigest === null) {
+            self::$eeatDigest = new ObjectType([
+                'name' => 'EeatDigest',
+                'fields' => [
+                    'dueSoonDays' => ['type' => Type::nonNull(self::int())],
+                    'totalRecommendations' => ['type' => Type::nonNull(self::int())],
+                    'activeRecommendations' => ['type' => Type::nonNull(self::int())],
+                    'overdueRecommendations' => ['type' => Type::nonNull(self::int())],
+                    'dueSoonRecommendations' => ['type' => Type::nonNull(self::int())],
+                ],
+            ]);
+        }
+        return self::$eeatDigest;
     }
 }

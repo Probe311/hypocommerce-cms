@@ -14,8 +14,17 @@ final class CatalogController
     {
         $repo = new PdoCatalogApiRepository();
         $locale = (string) $request->query->get('lang', 'fr');
+        $filters = [
+            'category' => (string) $request->query->get('category', ''),
+            'brand' => (string) $request->query->get('brand', ''),
+            'tag' => (string) $request->query->get('tag', ''),
+            'search' => (string) $request->query->get('search', ''),
+            'sort' => (string) $request->query->get('sort', 'featured'),
+            'limit' => $request->query->get('limit', null),
+            'offset' => $request->query->get('offset', null),
+        ];
 
-        return $this->json($repo->listProducts($locale));
+        return $this->json($repo->listProducts($locale, $filters));
     }
 
     public function product(Request $request, string $slug): Response
@@ -34,16 +43,72 @@ final class CatalogController
     public function brands(Request $request): Response
     {
         $repo = new PdoCatalogApiRepository();
+        $locale = (string) $request->query->get('lang', 'fr');
 
-        return $this->json($repo->listBrands());
+        return $this->json($repo->listBrands($locale));
     }
 
     public function categories(Request $request): Response
     {
         $repo = new PdoCatalogApiRepository();
         $locale = (string) $request->query->get('lang', 'fr');
+        $scope = (string) $request->query->get('scope', 'all');
+
+        if ($scope === 'families') {
+            return $this->json($repo->listCategoryFamilies($locale));
+        }
 
         return $this->json($repo->listCategories($locale));
+    }
+
+    public function navigation(Request $request): Response
+    {
+        $repo = new PdoCatalogApiRepository();
+        $locale = (string) $request->query->get('lang', 'fr');
+
+        return $this->json($repo->listNavigation($locale));
+    }
+
+    public function biomes(Request $request): Response
+    {
+        $repo = new PdoCatalogApiRepository();
+        $locale = (string) $request->query->get('lang', 'fr');
+
+        return $this->json($repo->listBiomes($locale));
+    }
+
+    public function paints(Request $request): Response
+    {
+        $repo = new PdoCatalogApiRepository();
+        $locale = (string) $request->query->get('lang', 'fr');
+
+        return $this->json($repo->listPaintsTree($locale));
+    }
+
+    public function basing(Request $request): Response
+    {
+        $repo = new PdoCatalogApiRepository();
+        $locale = (string) $request->query->get('lang', 'fr');
+
+        return $this->json($repo->listBasingTree($locale));
+    }
+
+    public function popularTags(Request $request): Response
+    {
+        $repo = new PdoCatalogApiRepository();
+        $locale = (string) $request->query->get('lang', 'fr');
+        $limit = (int) $request->query->get('limit', 8);
+
+        return $this->json($repo->listPopularTags($locale, $limit));
+    }
+
+    public function newArrivals(Request $request): Response
+    {
+        $repo = new PdoCatalogApiRepository();
+        $locale = (string) $request->query->get('lang', 'fr');
+        $limit = (int) $request->query->get('limit', 6);
+
+        return $this->json($repo->listNewArrivals($locale, $limit));
     }
 
     /**

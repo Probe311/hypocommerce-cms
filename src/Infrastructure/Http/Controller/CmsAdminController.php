@@ -9,14 +9,22 @@ use App\Application\Fulfillment\SplitShipmentService;
 use App\Application\Notification\TransactionalEmailService;
 use App\Application\Payment\RefundService;
 use App\Application\Shared\HookDispatcher;
+use App\Application\Tracking\TrackingIntegrationsService;
 use App\Application\Validation\InputValidator;
 use App\Application\Validation\ValidationException;
 use App\Infrastructure\Database\ConnectionFactory;
 use App\Infrastructure\Persistence\PdoCmsRepository;
+use App\Infrastructure\Persistence\PdoCmsV2Repository;
 use App\Infrastructure\Persistence\PdoCouponRepository;
 use App\Infrastructure\Persistence\PdoAdminMutationRepository;
+use App\Infrastructure\Persistence\PdoAdminPluginRepository;
+use App\Infrastructure\Persistence\PdoAdminPaymentMethodRepository;
+use App\Infrastructure\Persistence\PdoAdminShippingCarrierRepository;
+use App\Infrastructure\Persistence\PdoAdminTaxRuleRepository;
 use App\Infrastructure\Persistence\PdoOrderRepository;
+use App\Infrastructure\Persistence\PdoWebhookEventRepository;
 use App\Infrastructure\Security\RateLimiter;
+use App\Plugin\Runtime\PluginRuntimeInspector;
 use JsonException;
 use PDO;
 use Ramsey\Uuid\Uuid;
@@ -30,6 +38,8 @@ final class CmsAdminController
     private ?int $currentAdminUserId = null;
     private ?string $currentAdminRole = null;
     private ?string $currentIp = null;
+    /** @var array<string,bool> */
+    private array $tablePresenceCache = [];
 
     public function __construct()
     {
@@ -68,25 +78,61 @@ final class CmsAdminController
             // Keep admin endpoint robust even if extension hooks fail.
         }
 
-        $response = match ($resource) {
-            'auth/login' => $this->login($decoded),
-            'pages' => $this->upsertPage($decoded),
-            'blog/articles' => $this->upsertBlogArticle($decoded),
-            'faq/items' => $this->upsertFaqItem($decoded),
-            'legal/pages' => $this->upsertLegalPage($decoded),
-            'orders/shipments' => $this->updateOrderShipment($decoded),
-            'orders/status' => $this->updateOrderStatus($decoded),
-            'orders/refunds' => $this->refundOrder($decoded),
-            'orders/split-shipments' => $this->splitOrderShipments($decoded),
-            'products/bulk' => $this->bulkUpdateProducts($decoded),
-            'translations/upsert' => $this->upsertTranslation($decoded),
-            'search/products' => $this->searchProducts($decoded),
-            'search/orders' => $this->searchOrders($decoded),
-            'search/customers' => $this->searchCustomers($decoded),
-            'crm/segments' => $this->listCustomerSegments($decoded),
-            'coupons' => $this->upsertCoupon($decoded),
-            default => $this->json(['error' => 'not_found'], 404),
-        };
+        try {
+            $response = match ($resource) {
+                'auth/login' => $this->login($decoded),
+                'pages' => $this->upsertPage($decoded),
+                'pages/list' => $this->listPages(),
+                'pages/get' => $this->getPage($decoded),
+                'pages/delete' => $this->deletePage($decoded),
+                'pages/versions' => $this->listPageVersions($decoded),
+                'pages/revert' => $this->revertPageVersion($decoded),
+                'blog/articles' => $this->upsertBlogArticle($decoded),
+                'blog/articles/list' => $this->listBlogArticles(),
+                'blog/articles/get' => $this->getBlogArticle($decoded),
+                'blog/articles/delete' => $this->deleteBlogArticle($decoded),
+                'faq/items' => $this->upsertFaqItem($decoded),
+                'faq/items/list' => $this->listFaqItems(),
+                'faq/items/delete' => $this->deleteFaqItem($decoded),
+                'legal/pages' => $this->upsertLegalPage($decoded),
+                'legal/pages/list' => $this->listLegalPages(),
+                'legal/pages/get' => $this->getLegalPage($decoded),
+                'legal/pages/delete' => $this->deleteLegalPage($decoded),
+                'orders/shipments' => $this->updateOrderShipment($decoded),
+                'orders/status' => $this->updateOrderStatus($decoded),
+                'orders/refunds' => $this->refundOrder($decoded),
+                'orders/split-shipments' => $this->splitOrderShipments($decoded),
+                'products/bulk' => $this->bulkUpdateProducts($decoded),
+                'translations/upsert' => $this->upsertTranslation($decoded),
+                'search/products' => $this->searchProducts($decoded),
+            'products/images/list' => $this->listProductImages($decoded),
+                'search/orders' => $this->searchOrders($decoded),
+                'search/customers' => $this->searchCustomers($decoded),
+                'crm/segments' => $this->listCustomerSegments($decoded),
+                'coupons' => $this->upsertCoupon($decoded),
+                'plugins/list' => $this->listPlugins(),
+                'plugins/toggle' => $this->togglePlugin($decoded),
+                'plugins/config' => $this->updatePluginConfig($decoded),
+                'plugins/validate' => $this->validatePluginConfig($decoded),
+                'plugins/diagnostics' => $this->pluginDiagnostics($decoded),
+                'settings/taxes/list' => $this->listTaxRules(),
+                'settings/taxes/upsert' => $this->upsertTaxRule($decoded),
+                'settings/taxes/toggle' => $this->toggleTaxRule($decoded),
+                'settings/shipping/list' => $this->listShippingCarriers(),
+                'settings/shipping/upsert' => $this->upsertShippingCarrier($decoded),
+                'settings/shipping/toggle' => $this->toggleShippingCarrier($decoded),
+                'settings/payments/list' => $this->listPaymentMethods(),
+                'settings/payments/upsert' => $this->upsertPaymentMethod($decoded),
+                'settings/payments/toggle' => $this->togglePaymentMethod($decoded),
+                'settings/tracking/get' => $this->getTrackingSettings(),
+                'settings/tracking/save' => $this->saveTrackingSettings($decoded),
+                default => $this->json(['error' => 'not_found'], 404),
+            };
+        } catch (ValidationException $e) {
+            $response = $this->json(['error' => $e->errorCode()], 422);
+        } catch (\Throwable) {
+            $response = $this->json(['error' => 'internal_error'], 500);
+        }
 
         try {
             HookDispatcher::dispatch('cms.admin.after_mutation', [
@@ -186,6 +232,117 @@ final class CmsAdminController
         return $this->json(['ok' => true, 'resource' => 'pages', 'slug' => $slug], 200);
     }
 
+    private function listPages(): Response
+    {
+        $stmt = $this->pdo->query(
+            'SELECT id, slug, title, template, status, published_at, updated_at
+             FROM cms_pages
+             ORDER BY updated_at DESC, id DESC'
+        );
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->json(['ok' => true, 'items' => is_array($items) ? $items : []], 200);
+    }
+
+    private function getPage(array $payload): Response
+    {
+        $slug = trim((string) ($payload['slug'] ?? ''));
+        if ($slug === '') {
+            return $this->json(['error' => 'invalid_slug'], 422);
+        }
+        $stmt = $this->pdo->prepare('SELECT * FROM cms_pages WHERE slug = :slug LIMIT 1');
+        $stmt->execute(['slug' => $slug]);
+        $page = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($page)) {
+            return $this->json(['error' => 'page_not_found'], 404);
+        }
+        $sectionsStmt = $this->pdo->prepare(
+            'SELECT section_key, section_type, order_index, payload
+             FROM cms_page_sections
+             WHERE page_id = :page_id
+             ORDER BY order_index ASC, id ASC'
+        );
+        $sectionsStmt->execute(['page_id' => (int) $page['id']]);
+        $sections = $sectionsStmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->json(['ok' => true, 'item' => ['page' => $page, 'sections' => is_array($sections) ? $sections : []]], 200);
+    }
+
+    private function deletePage(array $payload): Response
+    {
+        $slug = trim((string) ($payload['slug'] ?? ''));
+        if ($slug === '') {
+            return $this->json(['error' => 'invalid_slug'], 422);
+        }
+        $before = $this->snapshotEntity('cms_pages', $slug);
+        if ($before === null) {
+            return $this->json(['error' => 'page_not_found'], 404);
+        }
+        $stmt = $this->pdo->prepare('UPDATE cms_pages SET status = :status, updated_at = :updated_at WHERE slug = :slug');
+        $stmt->execute([
+            'status' => 'archived',
+            'updated_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+            'slug' => $slug,
+        ]);
+        $after = $this->snapshotEntity('cms_pages', $slug);
+        $this->audit('archive', 'cms_pages', $slug, $payload, $before, $after);
+        return $this->json(['ok' => true, 'resource' => 'pages/delete', 'slug' => $slug], 200);
+    }
+
+    private function listPageVersions(array $payload): Response
+    {
+        $slug = trim((string) ($payload['slug'] ?? ''));
+        if ($slug === '') {
+            return $this->json(['error' => 'invalid_slug'], 422);
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT v.version, v.created_at
+             FROM cms_page_versions v
+             INNER JOIN cms_pages p ON p.id = v.page_id
+             WHERE p.slug = :slug
+             ORDER BY v.version DESC'
+        );
+        $stmt->execute(['slug' => $slug]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->json(['ok' => true, 'items' => is_array($items) ? $items : []], 200);
+    }
+
+    private function revertPageVersion(array $payload): Response
+    {
+        $slug = trim((string) ($payload['slug'] ?? ''));
+        $version = (int) ($payload['version'] ?? 0);
+        if ($slug === '' || $version < 1) {
+            return $this->json(['error' => 'invalid_revert_payload'], 422);
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT v.payload
+             FROM cms_page_versions v
+             INNER JOIN cms_pages p ON p.id = v.page_id
+             WHERE p.slug = :slug AND v.version = :version
+             LIMIT 1'
+        );
+        $stmt->execute(['slug' => $slug, 'version' => $version]);
+        $payloadJson = $stmt->fetchColumn();
+        if (!is_string($payloadJson) || trim($payloadJson) === '') {
+            return $this->json(['error' => 'version_not_found'], 404);
+        }
+        $decoded = json_decode($payloadJson, true);
+        if (!is_array($decoded)) {
+            return $this->json(['error' => 'invalid_version_payload'], 409);
+        }
+        $sections = isset($decoded['sections']) && is_array($decoded['sections']) ? $decoded['sections'] : [];
+        $restorePayload = [
+            'slug' => $slug,
+            'title' => (string) ($decoded['title'] ?? ''),
+            'template' => (string) ($decoded['template'] ?? 'default'),
+            'metaTitle' => $decoded['metaTitle'] ?? null,
+            'metaDescription' => $decoded['metaDescription'] ?? null,
+            'status' => (string) ($decoded['status'] ?? 'draft'),
+            'scheduledAt' => $decoded['scheduledAt'] ?? null,
+            'reviewNote' => $decoded['reviewNote'] ?? null,
+            'sections' => $sections,
+        ];
+        return $this->upsertPage($restorePayload);
+    }
+
     private function upsertBlogArticle(array $payload): Response
     {
         try {
@@ -196,6 +353,16 @@ final class CmsAdminController
             $body = $this->validator->requireNonEmptyString($payload, 'body', 'invalid_body');
         } catch (ValidationException $e) {
             return $this->json(['error' => $e->errorCode()], 422);
+        }
+
+        try {
+            $tags = $this->normalizeBlogTags($payload['tags'] ?? null);
+        } catch (ValidationException $e) {
+            return $this->json(['error' => $e->errorCode()], 422);
+        }
+
+        if ($tags === []) {
+            return $this->json(['error' => 'missing_tags'], 422);
         }
 
         $before = $this->snapshotEntity('blog_articles', $slug);
@@ -249,7 +416,9 @@ final class CmsAdminController
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
+                $articleId = (int) $this->pdo->lastInsertId();
             } else {
+                $articleId = (int) $articleId;
                 $update = $this->pdo->prepare(
                     'UPDATE blog_articles
                      SET title = :title, excerpt = :excerpt, body = :body, author_name = :author_name,
@@ -258,7 +427,7 @@ final class CmsAdminController
                      WHERE id = :id'
                 );
                 $update->execute([
-                    'id' => (int) $articleId,
+                    'id' => $articleId,
                     'title' => $title,
                     'excerpt' => $payload['excerpt'] ?? null,
                     'body' => $body,
@@ -272,6 +441,7 @@ final class CmsAdminController
                 ]);
             }
 
+            $this->syncBlogArticleTags($articleId, $tags, $now);
             $this->pdo->commit();
         } catch (\Throwable $e) {
             if ($this->pdo->inTransaction()) {
@@ -283,6 +453,171 @@ final class CmsAdminController
         $after = $this->snapshotEntity('blog_articles', $slug);
         $this->audit('upsert', 'blog_articles', $slug, $payload, $before, $after);
         return $this->json(['ok' => true, 'resource' => 'blog/articles', 'slug' => $slug], 200);
+    }
+
+    private function listBlogArticles(): Response
+    {
+        $stmt = $this->pdo->query(
+            'SELECT a.id, a.slug, a.title, a.status, a.published_at, a.updated_at, c.slug AS category_slug, c.name AS category_name
+             FROM blog_articles a
+             INNER JOIN blog_categories c ON c.id = a.category_id
+             ORDER BY a.updated_at DESC, a.id DESC'
+        );
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->json(['ok' => true, 'items' => is_array($items) ? $items : []], 200);
+    }
+
+    private function getBlogArticle(array $payload): Response
+    {
+        $slug = trim((string) ($payload['slug'] ?? ''));
+        if ($slug === '') {
+            return $this->json(['error' => 'invalid_slug'], 422);
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT a.id, a.slug, a.title, a.excerpt, a.body, a.status, a.meta_title, a.meta_description, a.published_at,
+                    c.slug AS category_slug, c.name AS category_name
+             FROM blog_articles a
+             INNER JOIN blog_categories c ON c.id = a.category_id
+             WHERE a.slug = :slug
+             ORDER BY a.id DESC
+             LIMIT 1'
+        );
+        $stmt->execute(['slug' => $slug]);
+        $item = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($item)) {
+            return $this->json(['error' => 'article_not_found'], 404);
+        }
+        return $this->json(['ok' => true, 'item' => $item], 200);
+    }
+
+    private function deleteBlogArticle(array $payload): Response
+    {
+        $slug = trim((string) ($payload['slug'] ?? ''));
+        if ($slug === '') {
+            return $this->json(['error' => 'invalid_slug'], 422);
+        }
+        $before = $this->snapshotEntity('blog_articles', $slug);
+        if ($before === null) {
+            return $this->json(['error' => 'article_not_found'], 404);
+        }
+        $stmt = $this->pdo->prepare('UPDATE blog_articles SET status = :status, updated_at = :updated_at WHERE slug = :slug');
+        $stmt->execute([
+            'status' => 'archived',
+            'updated_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+            'slug' => $slug,
+        ]);
+        $after = $this->snapshotEntity('blog_articles', $slug);
+        $this->audit('archive', 'blog_articles', $slug, $payload, $before, $after);
+        return $this->json(['ok' => true, 'resource' => 'blog/articles/delete', 'slug' => $slug], 200);
+    }
+
+    /**
+     * @return array<int,array{slug:string,name:string}>
+     */
+    private function normalizeBlogTags(mixed $rawTags): array
+    {
+        if (!is_array($rawTags)) {
+            throw new ValidationException('invalid_tags');
+        }
+
+        $normalized = [];
+        foreach ($rawTags as $rawTag) {
+            if (is_string($rawTag)) {
+                $slug = $this->slugify($rawTag);
+                if ($slug === '') {
+                    continue;
+                }
+                $normalized[$slug] = ['slug' => $slug, 'name' => ucfirst(str_replace('-', ' ', $slug))];
+                continue;
+            }
+
+            if (!is_array($rawTag)) {
+                continue;
+            }
+
+            $source = (string) ($rawTag['slug'] ?? $rawTag['name'] ?? '');
+            $slug = $this->slugify($source);
+            if ($slug === '') {
+                continue;
+            }
+            $name = trim((string) ($rawTag['name'] ?? ''));
+            $normalized[$slug] = [
+                'slug' => $slug,
+                'name' => $name !== '' ? $name : ucfirst(str_replace('-', ' ', $slug)),
+            ];
+        }
+
+        return array_values($normalized);
+    }
+
+    private function slugify(string $value): string
+    {
+        $value = strtolower(trim($value));
+        if ($value === '') {
+            return '';
+        }
+        $value = preg_replace('/[^a-z0-9]+/', '-', $value);
+        if (!is_string($value)) {
+            return '';
+        }
+        return trim($value, '-');
+    }
+
+    /**
+     * @param array<int,array{slug:string,name:string}> $tags
+     */
+    private function syncBlogArticleTags(int $articleId, array $tags, string $now): void
+    {
+        if (!$this->hasTable('blog_tags') || !$this->hasTable('blog_article_tags')) {
+            return;
+        }
+        $tagIds = [];
+        $selectTag = $this->pdo->prepare('SELECT id FROM blog_tags WHERE slug = :slug LIMIT 1');
+        $insertTag = $this->pdo->prepare(
+            'INSERT INTO blog_tags (slug, name, created_at, updated_at)
+             VALUES (:slug, :name, :created_at, :updated_at)'
+        );
+        $updateTag = $this->pdo->prepare(
+            'UPDATE blog_tags
+             SET name = :name, updated_at = :updated_at
+             WHERE id = :id'
+        );
+
+        foreach ($tags as $tag) {
+            $selectTag->execute(['slug' => $tag['slug']]);
+            $tagId = $selectTag->fetchColumn();
+            if ($tagId === false) {
+                $insertTag->execute([
+                    'slug' => $tag['slug'],
+                    'name' => $tag['name'],
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+                $tagIds[] = (int) $this->pdo->lastInsertId();
+                continue;
+            }
+
+            $tagId = (int) $tagId;
+            $updateTag->execute([
+                'id' => $tagId,
+                'name' => $tag['name'],
+                'updated_at' => $now,
+            ]);
+            $tagIds[] = $tagId;
+        }
+
+        $this->pdo->prepare('DELETE FROM blog_article_tags WHERE article_id = :article_id')
+            ->execute(['article_id' => $articleId]);
+        $insertPivot = $this->pdo->prepare(
+            'INSERT INTO blog_article_tags (article_id, tag_id)
+             VALUES (:article_id, :tag_id)'
+        );
+        foreach ($tagIds as $tagId) {
+            $insertPivot->execute([
+                'article_id' => $articleId,
+                'tag_id' => $tagId,
+            ]);
+        }
     }
 
     private function upsertFaqItem(array $payload): Response
@@ -345,6 +680,34 @@ final class CmsAdminController
         return $this->json(['ok' => true, 'resource' => 'faq/items', 'id' => $id], 201);
     }
 
+    private function listFaqItems(): Response
+    {
+        $stmt = $this->pdo->query(
+            'SELECT f.id, f.question, f.answer, f.order_index, f.status, c.slug AS category_slug, c.name AS category_name
+             FROM faq_items f
+             LEFT JOIN faq_categories c ON c.id = f.category_id
+             ORDER BY f.order_index ASC, f.id ASC'
+        );
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->json(['ok' => true, 'items' => is_array($items) ? $items : []], 200);
+    }
+
+    private function deleteFaqItem(array $payload): Response
+    {
+        $id = (int) ($payload['id'] ?? 0);
+        if ($id < 1) {
+            return $this->json(['error' => 'invalid_id'], 422);
+        }
+        $before = $this->snapshotEntity('faq_items', (string) $id);
+        if ($before === null) {
+            return $this->json(['error' => 'faq_item_not_found'], 404);
+        }
+        $stmt = $this->pdo->prepare('DELETE FROM faq_items WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+        $this->audit('delete', 'faq_items', (string) $id, $payload, $before, null);
+        return $this->json(['ok' => true, 'resource' => 'faq/items/delete', 'id' => $id], 200);
+    }
+
     private function upsertLegalPage(array $payload): Response
     {
         try {
@@ -402,6 +765,53 @@ final class CmsAdminController
         $after = $this->snapshotEntity('legal_pages', $slug);
         $this->audit('upsert', 'legal_pages', $slug, $payload, $before, $after);
         return $this->json(['ok' => true, 'resource' => 'legal/pages', 'slug' => $slug], 200);
+    }
+
+    private function listLegalPages(): Response
+    {
+        $stmt = $this->pdo->query(
+            'SELECT id, slug, title, version, status, published_at, updated_at
+             FROM legal_pages
+             ORDER BY updated_at DESC, id DESC'
+        );
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->json(['ok' => true, 'items' => is_array($items) ? $items : []], 200);
+    }
+
+    private function getLegalPage(array $payload): Response
+    {
+        $slug = trim((string) ($payload['slug'] ?? ''));
+        if ($slug === '') {
+            return $this->json(['error' => 'invalid_slug'], 422);
+        }
+        $stmt = $this->pdo->prepare('SELECT * FROM legal_pages WHERE slug = :slug LIMIT 1');
+        $stmt->execute(['slug' => $slug]);
+        $item = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($item)) {
+            return $this->json(['error' => 'legal_page_not_found'], 404);
+        }
+        return $this->json(['ok' => true, 'item' => $item], 200);
+    }
+
+    private function deleteLegalPage(array $payload): Response
+    {
+        $slug = trim((string) ($payload['slug'] ?? ''));
+        if ($slug === '') {
+            return $this->json(['error' => 'invalid_slug'], 422);
+        }
+        $before = $this->snapshotEntity('legal_pages', $slug);
+        if ($before === null) {
+            return $this->json(['error' => 'legal_page_not_found'], 404);
+        }
+        $stmt = $this->pdo->prepare('UPDATE legal_pages SET status = :status, updated_at = :updated_at WHERE slug = :slug');
+        $stmt->execute([
+            'status' => 'archived',
+            'updated_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+            'slug' => $slug,
+        ]);
+        $after = $this->snapshotEntity('legal_pages', $slug);
+        $this->audit('archive', 'legal_pages', $slug, $payload, $before, $after);
+        return $this->json(['ok' => true, 'resource' => 'legal/pages/delete', 'slug' => $slug], 200);
     }
 
     private function updateOrderShipment(array $payload): Response
@@ -504,6 +914,285 @@ final class CmsAdminController
         return $this->json(['ok' => true, 'resource' => 'coupons', 'id' => $couponId, 'code' => $code], 200);
     }
 
+    private function listPlugins(): Response
+    {
+        $items = (new PdoAdminPluginRepository())->listAll();
+        $inspector = new PluginRuntimeInspector();
+        foreach ($items as &$item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $pluginKey = strtolower(trim((string) ($item['plugin_key'] ?? '')));
+            $config = isset($item['config']) && is_array($item['config']) ? $item['config'] : [];
+            $mode = (string) ($item['mode'] ?? 'sandbox');
+            $item['runtime'] = $inspector->validate($pluginKey, $config, $mode);
+        }
+        unset($item);
+        return $this->json(['ok' => true, 'items' => $items], 200);
+    }
+
+    private function togglePlugin(array $payload): Response
+    {
+        try {
+            $pluginKey = strtolower($this->validator->requireNonEmptyString($payload, 'pluginKey', 'invalid_plugin_key'));
+            $enabled = (bool) ($payload['enabled'] ?? false);
+        } catch (ValidationException $e) {
+            return $this->json(['error' => $e->errorCode()], 422);
+        }
+
+        $repo = new PdoAdminPluginRepository();
+        if ($enabled) {
+            $validation = (new PluginRuntimeInspector())->validate($pluginKey);
+            if (($validation['ok'] ?? false) !== true) {
+                return $this->json([
+                    'error' => 'plugin_config_invalid',
+                    'pluginKey' => $pluginKey,
+                    'validation' => $validation,
+                ], 422);
+            }
+        }
+        $before = $this->snapshotEntity('admin_plugins', $pluginKey);
+        $ok = $repo->setEnabled($pluginKey, $enabled);
+        if (!$ok) {
+            return $this->json(['error' => 'plugin_update_failed'], 409);
+        }
+        $after = $this->snapshotEntity('admin_plugins', $pluginKey);
+        $this->audit('toggle_plugin', 'admin_plugins', $pluginKey, $payload, $before, $after);
+
+        return $this->json(['ok' => true, 'pluginKey' => $pluginKey, 'enabled' => $enabled], 200);
+    }
+
+    private function updatePluginConfig(array $payload): Response
+    {
+        try {
+            $pluginKey = strtolower($this->validator->requireNonEmptyString($payload, 'pluginKey', 'invalid_plugin_key'));
+            $mode = strtolower($this->validator->optionalTrimmedString($payload, 'mode') ?? 'sandbox');
+            $priority = (int) ($payload['priority'] ?? 100);
+            $publicLabel = $this->validator->optionalTrimmedString($payload, 'publicLabel');
+            $config = isset($payload['config']) && is_array($payload['config']) ? $payload['config'] : [];
+        } catch (ValidationException $e) {
+            return $this->json(['error' => $e->errorCode()], 422);
+        }
+
+        $repo = new PdoAdminPluginRepository();
+        $before = $this->snapshotEntity('admin_plugins', $pluginKey);
+        $ok = $repo->upsertConfig($pluginKey, $mode, $priority, $publicLabel, $config);
+        if (!$ok) {
+            return $this->json(['error' => 'plugin_config_update_failed'], 409);
+        }
+        $after = $this->snapshotEntity('admin_plugins', $pluginKey);
+        $this->audit('plugin_config', 'admin_plugins', $pluginKey, $payload, $before, $after);
+
+        return $this->json(['ok' => true, 'pluginKey' => $pluginKey], 200);
+    }
+
+    private function validatePluginConfig(array $payload): Response
+    {
+        try {
+            $pluginKey = strtolower($this->validator->requireNonEmptyString($payload, 'pluginKey', 'invalid_plugin_key'));
+            $mode = strtolower($this->validator->optionalTrimmedString($payload, 'mode') ?? 'sandbox');
+            $config = isset($payload['config']) && is_array($payload['config']) ? $payload['config'] : null;
+        } catch (ValidationException $e) {
+            return $this->json(['error' => $e->errorCode()], 422);
+        }
+
+        $validation = (new PluginRuntimeInspector())->validate($pluginKey, $config, $mode);
+        return $this->json(['ok' => true, 'pluginKey' => $pluginKey, 'validation' => $validation], 200);
+    }
+
+    private function pluginDiagnostics(array $payload): Response
+    {
+        try {
+            $pluginKey = strtolower($this->validator->requireNonEmptyString($payload, 'pluginKey', 'invalid_plugin_key'));
+        } catch (ValidationException $e) {
+            return $this->json(['error' => $e->errorCode()], 422);
+        }
+
+        $repo = new PdoAdminPluginRepository();
+        $runtime = $repo->getRuntimeConfig($pluginKey);
+        $validation = (new PluginRuntimeInspector())->validate($pluginKey);
+        $webhooks = [];
+        if (in_array($pluginKey, ['stripe', 'paypal'], true)) {
+            $webhooks = (new PdoWebhookEventRepository())->listRecentByProvider($pluginKey, 10);
+        }
+
+        return $this->json([
+            'ok' => true,
+            'pluginKey' => $pluginKey,
+            'runtime' => [
+                'mode' => (string) ($runtime['mode'] ?? 'sandbox'),
+                'config' => $this->redactSecrets(is_array($runtime['config'] ?? null) ? $runtime['config'] : []),
+            ],
+            'validation' => $validation,
+            'webhooks' => $webhooks,
+        ], 200);
+    }
+
+    private function getTrackingSettings(): Response
+    {
+        $repo = new PdoCmsV2Repository();
+        $stored = $repo->getSiteSettingByKey(TrackingIntegrationsService::SETTING_KEY);
+        $integrations = $stored !== null
+            ? TrackingIntegrationsService::mergeWithDefaults($stored)
+            : TrackingIntegrationsService::defaults();
+
+        return $this->json(['ok' => true, 'integrations' => $integrations], 200);
+    }
+
+    private function saveTrackingSettings(array $payload): Response
+    {
+        $raw = [];
+        if (isset($payload['integrations']) && is_array($payload['integrations'])) {
+            $raw = $payload['integrations'];
+        }
+
+        try {
+            $normalized = TrackingIntegrationsService::validateAndMerge($raw);
+        } catch (ValidationException $e) {
+            return $this->json(['error' => $e->errorCode()], 422);
+        }
+
+        $upsert = [
+            'settingKey' => TrackingIntegrationsService::SETTING_KEY,
+            'settingValue' => $normalized,
+        ];
+        if ($this->currentAdminUserId !== null && $this->currentAdminUserId > 0) {
+            $upsert['adminUserId'] = $this->currentAdminUserId;
+        }
+        (new PdoCmsV2Repository())->upsertSiteSettings($upsert);
+        $this->audit('upsert', 'cms_site_settings', TrackingIntegrationsService::SETTING_KEY, $payload);
+
+        return $this->json(['ok' => true, 'integrations' => $normalized], 200);
+    }
+
+    private function listTaxRules(): Response
+    {
+        $items = (new PdoAdminTaxRuleRepository())->listAll();
+        return $this->json(['ok' => true, 'items' => $items], 200);
+    }
+
+    private function upsertTaxRule(array $payload): Response
+    {
+        try {
+            $countryCode = strtoupper($this->validator->requireNonEmptyString($payload, 'countryCode', 'invalid_country_code'));
+            $regionCode = $this->validator->optionalTrimmedString($payload, 'regionCode');
+            $taxType = strtolower($this->validator->optionalTrimmedString($payload, 'taxType') ?? 'vat');
+            $rate = (float) ($payload['rate'] ?? 0);
+            $isDefault = (bool) ($payload['isDefault'] ?? false);
+            $metadata = isset($payload['metadata']) && is_array($payload['metadata']) ? $payload['metadata'] : [];
+        } catch (ValidationException $e) {
+            return $this->json(['error' => $e->errorCode()], 422);
+        }
+        $ok = (new PdoAdminTaxRuleRepository())->upsert($countryCode, $regionCode, $taxType, $rate, $isDefault, $metadata);
+        if (!$ok) {
+            return $this->json(['error' => 'tax_rule_upsert_failed'], 409);
+        }
+        $this->audit('upsert', 'admin_tax_rules', $countryCode . ':' . ($regionCode ?? '-') . ':' . $taxType, $payload);
+        return $this->json(['ok' => true], 200);
+    }
+
+    private function toggleTaxRule(array $payload): Response
+    {
+        $id = (int) ($payload['id'] ?? 0);
+        $enabled = (bool) ($payload['enabled'] ?? false);
+        if ($id < 1) {
+            return $this->json(['error' => 'invalid_id'], 422);
+        }
+        $ok = (new PdoAdminTaxRuleRepository())->toggle($id, $enabled);
+        if (!$ok) {
+            return $this->json(['error' => 'tax_rule_toggle_failed'], 409);
+        }
+        $this->audit('toggle', 'admin_tax_rules', (string) $id, $payload);
+        return $this->json(['ok' => true], 200);
+    }
+
+    private function listShippingCarriers(): Response
+    {
+        $items = (new PdoAdminShippingCarrierRepository())->listAll();
+        return $this->json(['ok' => true, 'items' => $items], 200);
+    }
+
+    private function upsertShippingCarrier(array $payload): Response
+    {
+        try {
+            $carrierKey = strtolower($this->validator->requireNonEmptyString($payload, 'carrierKey', 'invalid_carrier_key'));
+            $label = $this->validator->requireNonEmptyString($payload, 'label', 'invalid_label');
+            $zonesRaw = isset($payload['zones']) && is_array($payload['zones']) ? $payload['zones'] : [];
+            $priority = (int) ($payload['priority'] ?? 100);
+            $metadata = isset($payload['metadata']) && is_array($payload['metadata']) ? $payload['metadata'] : [];
+        } catch (ValidationException $e) {
+            return $this->json(['error' => $e->errorCode()], 422);
+        }
+        $zones = [];
+        foreach ($zonesRaw as $zone) {
+            if (is_string($zone) && trim($zone) !== '') {
+                $zones[] = strtoupper(trim($zone));
+            }
+        }
+        $ok = (new PdoAdminShippingCarrierRepository())->upsert($carrierKey, $label, $zones, $priority, $metadata);
+        if (!$ok) {
+            return $this->json(['error' => 'shipping_carrier_upsert_failed'], 409);
+        }
+        $this->audit('upsert', 'admin_shipping_carriers', $carrierKey, $payload);
+        return $this->json(['ok' => true], 200);
+    }
+
+    private function toggleShippingCarrier(array $payload): Response
+    {
+        $id = (int) ($payload['id'] ?? 0);
+        $enabled = (bool) ($payload['enabled'] ?? false);
+        if ($id < 1) {
+            return $this->json(['error' => 'invalid_id'], 422);
+        }
+        $ok = (new PdoAdminShippingCarrierRepository())->toggle($id, $enabled);
+        if (!$ok) {
+            return $this->json(['error' => 'shipping_carrier_toggle_failed'], 409);
+        }
+        $this->audit('toggle', 'admin_shipping_carriers', (string) $id, $payload);
+        return $this->json(['ok' => true], 200);
+    }
+
+    private function listPaymentMethods(): Response
+    {
+        $items = (new PdoAdminPaymentMethodRepository())->listAll();
+        return $this->json(['ok' => true, 'items' => $items], 200);
+    }
+
+    private function upsertPaymentMethod(array $payload): Response
+    {
+        try {
+            $methodKey = strtolower($this->validator->requireNonEmptyString($payload, 'methodKey', 'invalid_method_key'));
+            $label = $this->validator->requireNonEmptyString($payload, 'label', 'invalid_label');
+            $provider = strtolower($this->validator->requireNonEmptyString($payload, 'provider', 'invalid_provider'));
+            $mode = strtolower($this->validator->optionalTrimmedString($payload, 'mode') ?? 'sandbox');
+            $priority = (int) ($payload['priority'] ?? 100);
+            $metadata = isset($payload['metadata']) && is_array($payload['metadata']) ? $payload['metadata'] : [];
+        } catch (ValidationException $e) {
+            return $this->json(['error' => $e->errorCode()], 422);
+        }
+        $ok = (new PdoAdminPaymentMethodRepository())->upsert($methodKey, $label, $provider, $mode, $priority, $metadata);
+        if (!$ok) {
+            return $this->json(['error' => 'payment_method_upsert_failed'], 409);
+        }
+        $this->audit('upsert', 'admin_payment_methods', $methodKey, $payload);
+        return $this->json(['ok' => true], 200);
+    }
+
+    private function togglePaymentMethod(array $payload): Response
+    {
+        $id = (int) ($payload['id'] ?? 0);
+        $enabled = (bool) ($payload['enabled'] ?? false);
+        if ($id < 1) {
+            return $this->json(['error' => 'invalid_id'], 422);
+        }
+        $ok = (new PdoAdminPaymentMethodRepository())->toggle($id, $enabled);
+        if (!$ok) {
+            return $this->json(['error' => 'payment_method_toggle_failed'], 409);
+        }
+        $this->audit('toggle', 'admin_payment_methods', (string) $id, $payload);
+        return $this->json(['ok' => true], 200);
+    }
+
     private function refundOrder(array $payload): Response
     {
         try {
@@ -543,23 +1232,71 @@ final class CmsAdminController
         $limit = max(1, min(100, (int) ($payload['limit'] ?? 30)));
         $offset = max(0, (int) ($payload['offset'] ?? 0));
 
-        $sql = 'SELECT id, sku, name, slug, price, sale_price, status, type, updated_at
-                FROM products
-                WHERE 1=1';
+        $sql = "SELECT
+                p.id,
+                p.sku,
+                p.name,
+                p.slug,
+                p.price,
+                p.sale_price,
+                p.status,
+                p.type,
+                p.updated_at,
+                COALESCE((
+                    SELECT b.name
+                    FROM product_brand_pivot pbp
+                    INNER JOIN brands b ON b.id = pbp.brand_id
+                    WHERE pbp.product_id = p.id
+                    ORDER BY b.id ASC
+                    LIMIT 1
+                ), 'Marque') AS brand_name,
+                EXISTS(
+                    SELECT 1
+                    FROM product_images pi
+                    WHERE pi.product_id = p.id
+                    LIMIT 1
+                ) AS has_image,
+                (
+                    SELECT CAST(REPLACE(NULLIF(ts.value, ''), ',', '.') AS DECIMAL(12,2))
+                    FROM product_technical_specs ts
+                    WHERE ts.product_id = p.id
+                      AND LOWER(ts.label) LIKE '%achat%'
+                    ORDER BY ts.position ASC, ts.id ASC
+                    LIMIT 1
+                ) AS purchase_price,
+                (
+                    SELECT CAST(REPLACE(NULLIF(ts.value, ''), ',', '.') AS DECIMAL(12,2))
+                    FROM product_technical_specs ts
+                    WHERE ts.product_id = p.id
+                      AND LOWER(ts.label) LIKE '%marge%'
+                    ORDER BY ts.position ASC, ts.id ASC
+                    LIMIT 1
+                ) AS margin,
+                (
+                    SELECT s.score_global
+                    FROM eeat_scores s
+                    WHERE s.entity_type = 'product'
+                      AND s.entity_id = p.id
+                      AND s.locale = 'fr'
+                    ORDER BY s.computed_at DESC
+                    LIMIT 1
+                ) AS seo_score
+                FROM products p
+                WHERE 1=1";
         $params = [];
         if ($q !== '') {
-            $sql .= ' AND (LOWER(name) LIKE :q OR LOWER(sku) LIKE :q OR LOWER(slug) LIKE :q)';
+            $sql .= ' AND (LOWER(p.name) LIKE :q OR LOWER(p.sku) LIKE :q OR LOWER(p.slug) LIKE :q)';
             $params['q'] = '%' . $q . '%';
         }
         if ($status !== '') {
-            $sql .= ' AND status = :status';
+            $sql .= ' AND p.status = :status';
             $params['status'] = $status;
         }
         if ($type !== '') {
-            $sql .= ' AND type = :type';
+            $sql .= ' AND p.type = :type';
             $params['type'] = $type;
         }
-        $sql .= ' ORDER BY updated_at DESC LIMIT :limit OFFSET :offset';
+        $sql .= ' ORDER BY p.updated_at DESC LIMIT :limit OFFSET :offset';
 
         $stmt = $this->pdo->prepare($sql);
         foreach ($params as $k => $v) {
@@ -568,6 +1305,24 @@ final class CmsAdminController
         $stmt->bindValue('limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue('offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $this->json(['ok' => true, 'items' => is_array($items) ? $items : []], 200);
+    }
+
+    private function listProductImages(array $payload): Response
+    {
+        $productId = trim((string) ($payload['productId'] ?? ''));
+        if (!Uuid::isValid($productId)) {
+            return $this->json(['error' => 'invalid_product_id'], 422);
+        }
+
+        $stmt = $this->pdo->prepare(
+            'SELECT id, product_id, url, alt, position
+             FROM product_images
+             WHERE product_id = :product_id
+             ORDER BY position ASC, id ASC'
+        );
+        $stmt->execute(['product_id' => $productId]);
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $this->json(['ok' => true, 'items' => is_array($items) ? $items : []], 200);
     }
@@ -597,6 +1352,9 @@ final class CmsAdminController
         }
 
         if ($entity === 'product') {
+            if (!$this->hasTable('product_translations')) {
+                return $this->json(['error' => 'missing_table_product_translations'], 409);
+            }
             $productId = trim((string) ($payload['productId'] ?? ''));
             if (!Uuid::isValid($productId)) {
                 return $this->json(['error' => 'invalid_product_id'], 422);
@@ -623,6 +1381,9 @@ final class CmsAdminController
         }
 
         if ($entity === 'category') {
+            if (!$this->hasTable('product_category_translations')) {
+                return $this->json(['error' => 'missing_table_category_translations'], 409);
+            }
             $categoryId = (int) ($payload['categoryId'] ?? 0);
             if ($categoryId < 1) {
                 return $this->json(['error' => 'invalid_category_id'], 422);
@@ -645,6 +1406,9 @@ final class CmsAdminController
         }
 
         if ($entity === 'cms_page') {
+            if (!$this->hasTable('cms_page_translations')) {
+                return $this->json(['error' => 'missing_table_cms_page_translations'], 409);
+            }
             $pageSlug = trim((string) ($payload['pageSlug'] ?? ''));
             if ($pageSlug === '') {
                 return $this->json(['error' => 'invalid_page_slug'], 422);
@@ -801,6 +1565,16 @@ final class CmsAdminController
             return null;
         }
 
+        $uiReview = trim((string) $request->headers->get('X-UI-Review', '')) === '1';
+        $appEnv = strtolower((string) ($_ENV['APP_ENV'] ?? 'dev'));
+        $nonProd = $appEnv !== 'prod' && $appEnv !== 'production';
+        $uiReviewAllowedEnv = filter_var($_ENV['ADMIN_UI_REVIEW_ALLOWED'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if ($uiReview && $nonProd && $uiReviewAllowedEnv) {
+            $this->currentAdminUserId = null;
+            $this->currentAdminRole = 'super_admin';
+            return null;
+        }
+
         $requiredRole = $this->requiredRoleForResource($resource);
 
         $authorization = (string) $request->headers->get('Authorization', '');
@@ -820,6 +1594,12 @@ final class CmsAdminController
                 return $this->json(['error' => 'forbidden'], 403);
             }
             return null;
+        }
+
+        // Legacy fallback is disabled by default; enable only for controlled transitions.
+        $legacyAllowed = filter_var($_ENV['ALLOW_LEGACY_ADMIN_TOKEN'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if (!$legacyAllowed) {
+            return $this->json(['error' => 'unauthorized'], 401);
         }
 
         // Legacy fallback: static admin token, elevated to super_admin.
@@ -850,6 +1630,22 @@ final class CmsAdminController
             'translations/upsert' => 'admin',
             'coupons' => 'admin',
             'crm/segments' => 'admin',
+            'plugins/list' => 'admin',
+            'plugins/toggle' => 'admin',
+            'plugins/config' => 'admin',
+            'plugins/validate' => 'admin',
+            'plugins/diagnostics' => 'admin',
+            'settings/taxes/list' => 'admin',
+            'settings/taxes/upsert' => 'admin',
+            'settings/taxes/toggle' => 'admin',
+            'settings/shipping/list' => 'admin',
+            'settings/shipping/upsert' => 'admin',
+            'settings/shipping/toggle' => 'admin',
+            'settings/payments/list' => 'admin',
+            'settings/payments/upsert' => 'admin',
+            'settings/payments/toggle' => 'admin',
+            'settings/tracking/get' => 'admin',
+            'settings/tracking/save' => 'admin',
             default => 'manager',
         };
     }
@@ -878,7 +1674,11 @@ final class CmsAdminController
 
     private function buildCsrfTokenForSecret(string $secret): string
     {
-        return hash_hmac('sha256', $secret, (string) ($_ENV['APP_SECRET'] ?? 'dev-secret'));
+        $appSecret = trim((string) ($_ENV['APP_SECRET'] ?? ''));
+        if ($appSecret === '') {
+            throw new \RuntimeException('app_secret_not_configured');
+        }
+        return hash_hmac('sha256', $secret, $appSecret);
     }
 
     /**
@@ -898,7 +1698,7 @@ final class CmsAdminController
                 'entity_id' => $entityId,
             ],
             'ip' => $this->currentIp,
-            'input' => $data,
+            'input' => $this->redactSecrets($data),
             'before' => $before,
             'after' => $after,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -940,6 +1740,7 @@ final class CmsAdminController
             'order_shipments' => $this->snapshotBySql('SELECT * FROM order_shipments WHERE order_id = :id LIMIT 1', $entityId),
             'coupons' => $this->snapshotBySql('SELECT * FROM coupons WHERE code = :id LIMIT 1', strtoupper($entityId)),
             'orders' => $this->snapshotBySql('SELECT * FROM orders WHERE id = :id LIMIT 1', $entityId),
+            'admin_plugins' => $this->snapshotBySql('SELECT * FROM admin_plugins WHERE plugin_key = :id LIMIT 1', $entityId),
             default => null,
         };
     }
@@ -953,6 +1754,50 @@ final class CmsAdminController
         $stmt->execute(['id' => $id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return is_array($row) ? $row : null;
+    }
+
+    /**
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
+     */
+    private function redactSecrets(array $data): array
+    {
+        $out = [];
+        foreach ($data as $k => $v) {
+            $key = strtolower((string) $k);
+            $isSensitive = str_contains($key, 'secret')
+                || str_contains($key, 'token')
+                || str_contains($key, 'password')
+                || str_contains($key, 'apikey')
+                || str_contains($key, 'api_key')
+                || str_contains($key, 'clientsecret')
+                || str_contains($key, 'webhook');
+            if (is_array($v)) {
+                $out[$k] = $this->redactSecrets($v);
+                continue;
+            }
+            if ($isSensitive && is_string($v) && $v !== '') {
+                $out[$k] = '***';
+                continue;
+            }
+            $out[$k] = $v;
+        }
+        return $out;
+    }
+
+    private function hasTable(string $table): bool
+    {
+        if (array_key_exists($table, $this->tablePresenceCache)) {
+            return $this->tablePresenceCache[$table];
+        }
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = :table_name"
+        );
+        $stmt->execute(['table_name' => $table]);
+        $exists = ((int) $stmt->fetchColumn()) > 0;
+        $this->tablePresenceCache[$table] = $exists;
+        return $exists;
     }
 
     /**

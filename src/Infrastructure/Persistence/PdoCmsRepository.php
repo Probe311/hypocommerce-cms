@@ -12,6 +12,8 @@ final class PdoCmsRepository
 {
     private PDO $pdo;
     private FileCache $cache;
+    private ?bool $hasBlogArticleTagsTable = null;
+    private ?bool $hasCmsPageTranslationsTable = null;
 
     public function __construct()
     {
@@ -32,17 +34,27 @@ final class PdoCmsRepository
             return $cached;
         }
 
-        $stmt = $this->pdo->prepare(
-            'SELECT p.id, p.slug, COALESCE(t.title, p.title) AS title, p.template, p.status,
-                    COALESCE(t.meta_title, p.meta_title) AS meta_title,
-                    COALESCE(t.meta_description, p.meta_description) AS meta_description,
-                    p.published_at
-             FROM cms_pages p
-             LEFT JOIN cms_page_translations t ON t.page_id = p.id AND t.locale = :locale
-             WHERE slug = :slug AND status = :status
-             LIMIT 1'
-        );
-        $stmt->execute(['slug' => $slug, 'status' => 'published', 'locale' => $locale]);
+        if ($this->hasCmsPageTranslationsTable()) {
+            $stmt = $this->pdo->prepare(
+                'SELECT p.id, p.slug, COALESCE(t.title, p.title) AS title, p.template, p.status,
+                        COALESCE(t.meta_title, p.meta_title) AS meta_title,
+                        COALESCE(t.meta_description, p.meta_description) AS meta_description,
+                        p.published_at
+                 FROM cms_pages p
+                 LEFT JOIN cms_page_translations t ON t.page_id = p.id AND t.locale = :locale
+                 WHERE slug = :slug AND status = :status
+                 LIMIT 1'
+            );
+            $stmt->execute(['slug' => $slug, 'status' => 'published', 'locale' => $locale]);
+        } else {
+            $stmt = $this->pdo->prepare(
+                'SELECT p.id, p.slug, p.title, p.template, p.status, p.meta_title, p.meta_description, p.published_at
+                 FROM cms_pages p
+                 WHERE slug = :slug AND status = :status
+                 LIMIT 1'
+            );
+            $stmt->execute(['slug' => $slug, 'status' => 'published']);
+        }
         $page = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!is_array($page)) {
             return null;
@@ -68,7 +80,7 @@ final class PdoCmsRepository
     public function findPublishedBlogArticles(): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT a.slug, a.title, a.excerpt, a.body, a.author_name, a.author_job_title, a.published_at,
+            'SELECT a.id AS article_id, a.slug, a.title, a.excerpt, a.body, a.author_name, a.author_job_title, a.published_at,
                     c.slug AS category_slug, c.name AS category_name
              FROM blog_articles a
              INNER JOIN blog_categories c ON c.id = a.category_id
@@ -77,7 +89,19 @@ final class PdoCmsRepository
         );
         $stmt->execute(['status' => 'published']);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return is_array($rows) ? $rows : [];
+        if (!is_array($rows) || $rows === []) {
+            return [];
+        }
+
+        $articleIds = array_values(array_map(static fn (array $row): int => (int) $row['article_id'], $rows));
+        $tagsByArticleId = $this->loadBlogTagsByArticleIds($articleIds);
+        foreach ($rows as &$row) {
+            $articleId = (int) $row['article_id'];
+            $row['tags'] = $tagsByArticleId[$articleId] ?? [];
+        }
+        unset($row);
+
+        return $rows;
     }
 
     /**
@@ -86,7 +110,7 @@ final class PdoCmsRepository
     public function findPublishedBlogArticle(string $categorySlug, string $articleSlug): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT a.slug, a.title, a.excerpt, a.body, a.author_name, a.author_job_title, a.published_at,
+            'SELECT a.id AS article_id, a.slug, a.title, a.excerpt, a.body, a.author_name, a.author_job_title, a.published_at,
                     c.slug AS category_slug, c.name AS category_name
              FROM blog_articles a
              INNER JOIN blog_categories c ON c.id = a.category_id
@@ -99,7 +123,87 @@ final class PdoCmsRepository
             'article_slug' => $articleSlug,
         ]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return is_array($row) ? $row : null;
+        if (!is_array($row)) {
+            return null;
+        }
+        $articleId = (int) $row['article_id'];
+        $tagsByArticleId = $this->loadBlogTagsByArticleIds([$articleId]);
+        $row['tags'] = $tagsByArticleId[$articleId] ?? [];
+        return $row;
+    }
+
+    /**
+     * @param array<int,int> $articleIds
+     * @return array<int,array<int,array{slug:string,name:string}>>
+     */
+    private function loadBlogTagsByArticleIds(array $articleIds): array
+    {
+        if ($articleIds === []) {
+            return [];
+        }
+
+        // Some production databases can be partially migrated. When the pivot
+        // table is missing, keep API responses alive by returning no tags.
+        if (!$this->hasBlogArticleTagsTable()) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($articleIds), '?'));
+        $stmt = $this->pdo->prepare(
+            "SELECT bat.article_id, t.slug, t.name
+             FROM blog_article_tags bat
+             INNER JOIN blog_tags t ON t.id = bat.tag_id
+             WHERE bat.article_id IN ({$placeholders})
+             ORDER BY t.name ASC"
+        );
+        foreach ($articleIds as $index => $articleId) {
+            $stmt->bindValue($index + 1, $articleId, PDO::PARAM_INT);
+        }
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (!is_array($rows)) {
+            return [];
+        }
+
+        $tagsByArticleId = [];
+        foreach ($rows as $row) {
+            $id = (int) $row['article_id'];
+            $tagsByArticleId[$id][] = [
+                'slug' => (string) $row['slug'],
+                'name' => (string) $row['name'],
+            ];
+        }
+        return $tagsByArticleId;
+    }
+
+    private function hasBlogArticleTagsTable(): bool
+    {
+        if ($this->hasBlogArticleTagsTable !== null) {
+            return $this->hasBlogArticleTagsTable;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = 'blog_article_tags'"
+        );
+        $stmt->execute();
+        $this->hasBlogArticleTagsTable = ((int) $stmt->fetchColumn()) > 0;
+        return $this->hasBlogArticleTagsTable;
+    }
+
+    private function hasCmsPageTranslationsTable(): bool
+    {
+        if ($this->hasCmsPageTranslationsTable !== null) {
+            return $this->hasCmsPageTranslationsTable;
+        }
+
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(*) FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = 'cms_page_translations'"
+        );
+        $stmt->execute();
+        $this->hasCmsPageTranslationsTable = ((int) $stmt->fetchColumn()) > 0;
+        return $this->hasCmsPageTranslationsTable;
     }
 
     /**

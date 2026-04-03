@@ -8,6 +8,17 @@ require dirname(__DIR__, 3) . '/vendor/autoload.php';
 
 header('Content-Type: application/json');
 
+$expected = $_ENV['ADMIN_API_TOKEN'] ?? '';
+$provided = (string) ($_SERVER['HTTP_X_ADMIN_TOKEN'] ?? '');
+$csrf = (string) ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+$appSecret = (string) ($_ENV['APP_SECRET'] ?? 'dev-secret');
+$expectedCsrf = hash_hmac('sha256', $expected, $appSecret);
+if (!is_string($expected) || $expected === '' || $provided === '' || !hash_equals($expected, $provided) || $csrf === '' || !hash_equals($expectedCsrf, $csrf)) {
+    http_response_code(401);
+    echo json_encode(['error' => 'unauthorized']);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);

@@ -32,7 +32,7 @@ Feuille de route backend e-commerce PHP (hors frontend Next), alignée sur un ni
 - [x] `P0 | MVP | Dépendances: API CMS` Exposer la lecture CMS (pages, blog, FAQ, légal).
 - [x] `P0 | MVP | Dépendances: sécurité admin` Exposer l'API admin CMS (pages, articles, FAQ, légal) avec token admin.
 - [x] `P0 | MVP | Dépendances: stockage fichiers` Créer upload/suppression/reordonnancement des images produit.
-- [ ] `P0 | MVP | Dépendances: upload images` Ajouter génération de miniatures + variantes de format.
+ - [ ] `P0 | MVP | Dépendances: upload images` Ajouter génération de miniatures + variantes de format (partiellement couvert pour les médias CMS via `ImageOptimizationService` + scripts `bin/normalize_existing_cms_images_remote.php` / `bin/fill_cms_hero_images_remote.php`; reste à brancher proprement sur les images produits).
 - [x] `P1 | Phase2 | Dépendances: CMS admin` Implémenter workflow éditorial CMS (draft, review, publish, scheduling, versioning) sur `cms_pages` (statuts étendus, `scheduledAt`, `reviewNote`, table `cms_page_versions`, job `bin/publish_scheduled_cms.php`).
 - [x] `P1 | Phase2 | Dépendances: catalogue` Ajouter import massif + édition bulk catalogue (PIM light) via `bin/import_catalog_bulk.php` et endpoint admin `products/bulk`.
 - [x] `P2 | Phase2 | Dépendances: CMS + catalogue` Ajouter multi-langue pour contenu CMS et catalogue (tables de traduction + fallback `lang` sur APIs + endpoint admin `translations/upsert`).
@@ -84,8 +84,8 @@ Feuille de route backend e-commerce PHP (hors frontend Next), alignée sur un ni
 ## Domaine F - Back-office & API
 
 - [x] `P0 | MVP | Dépendances: auth admin` Protéger l'accès back-office avec authentification admin robuste (login admin + Bearer JWT + fallback token legacy).
-- [ ] `P0 | MVP | Dépendances: API métier` Créer écrans principaux (Dashboard, Produits, Commandes, Clients, Pages, Paramètres).
-- [ ] `P0 | MVP | Dépendances: écrans admin` Brancher écrans sur API réelle (REST/GraphQL).
+ - [x] `P0 | MVP | Dépendances: API métier` Créer écrans principaux (Dashboard, Produits, Commandes, Clients, Pages, Paramètres) via `public/admin/app.js` + pages Preact (dashboard, products, orders, customers, content, settings, tracking, plugins).
+ - [x] `P0 | MVP | Dépendances: écrans admin` Brancher écrans sur API réelle (REST/GraphQL) via `public/admin/services/api.js` (`/api/v1/admin/*` + endpoints legacy `/admin/api/*`).
 - [x] `P0 | MVP | Dépendances: commandes + livraison` Ajouter gestion statuts commande et suivi colis depuis admin (`orders/shipments` + `orders/status`).
 - [x] `P1 | Phase2 | Dépendances: API admin` Ajouter filtres/recherche avancés (produits, commandes, clients) via endpoints admin REST `search/products`, `search/orders`, `search/customers`.
 - [x] `P1 | Phase2 | Dépendances: audit` Ajouter audit logs admin enrichis (`qui`, `quand`, `quoi`, IP, avant/après`) avec snapshots `before/after` sur endpoints admin REST.
@@ -105,6 +105,17 @@ Feuille de route backend e-commerce PHP (hors frontend Next), alignée sur un ni
 - [x] `P0 | MVP | Dépendances: CI` Ajouter suite de tests minimum (smoke + integration API + parcours checkout/auth admin). Webhooks: couverture end-to-end restante a automatiser.
 - [x] `P1 | Phase2 | Dépendances: exploitation` Ajouter sauvegardes/restauration + runbook incident (`bin/backup_db.php`, `bin/restore_db.php`, `docs/runbook-incident.md`).
 - [x] `P1 | Phase2 | Dépendances: conformité` Implémenter RGPD (export/anonymisation via `bin/rgpd_export_customer.php` et `bin/rgpd_anonymize_customer.php`).
+ - [x] `P1 | Phase2 | Dépendances: exploitation` Packaging Docker de référence pour setup local / déploiement + CI multi-jobs (aligné roadmap Hypocommerce CMS v0.2) via `docker-compose.yml` (services `db` + `app`) et workflow GitHub Actions multi-jobs `.github/workflows/backend-ci.yml`.
+
+## Domaine H - Alignement API storefront (Next.js) & exposition métier
+
+Écarts identifiés entre le frontend (appels REST à la racine de `NEXT_PUBLIC_API_BASE_URL`) et le routeur HTTP actuel (GraphQL + `/api/v1/*`). À traiter pour que la prod ne dépende pas des fallbacks dev.
+
+- [ ] `P0 | MVP | Dépendances: services checkout/auth/paiement` Exposer des routes REST storefront équivalentes aux usages Next : `POST /checkout/orders`, `POST /auth/login`, `POST /auth/register`, `GET /account/orders` (Bearer), `POST /payments/stripe/session`, `POST /payments/paypal/order` — en réutilisant les services/mutations GraphQL existants (ou documenter + fournir un BFF/proxy officiel).
+- [ ] `P0 | MVP | Dépendances: panier + pricing` Fournir une quotation / validation panier côté API (totaux, TVA, frais de port, stock, coupons) consommable par le front avant `startOrderPayment`, pour éviter toute source de vérité uniquement navigateur.
+ - [x] `P1 | Phase2 | Dépendances: webhooks` Finaliser la vérification de signature PayPal sur le webhook (cohérence avec Stripe déjà exigée en prod) via `PaypalPaymentProvider::verifyWebhook()` appelé depuis `PaymentWebhookController::handlePaypal()`.
+- [ ] `P2 | Phase2 | Dépendances: comptes clients` Exposer synchronisation wishlist serveur (si non couvert) pour alignement avec le compte client (non implémenté dans le core v1; à adresser via extension/plugin ou service externe).
+- [ ] `P2 | Phase2 | Dépendances: catalogue + confiance` API ou champs catalogue pour avis clients vérifiés / agrégats (consommation par le front et JSON-LD `Review` / `AggregateRating`) — non implémenté dans le core v1; documenté comme hors scope minimal.
 
 ## Ordre d'exécution recommandé
 
@@ -115,10 +126,12 @@ Feuille de route backend e-commerce PHP (hors frontend Next), alignée sur un ni
 4. Domaine E: comptes clients complets (inscription/login/reset/adresses).
 5. Domaine F: back-office opérationnel commandes/produits/contenu + GraphQL essentiel.
 6. Domaine G: tests d'intégration critiques + sitemap/slugs cohérents.
+7. Domaine H: routes REST storefront (ou contrat unique documenté) + quotation panier pour alignement Next.js en production.
 
 ### Phase2 (post go-live)
 1. Promotions avancées, remboursements complets, segmentation marketing.
 2. CMS workflow éditorial complet + bulk operations + multi-langue.
 3. Logistique avancée (backorder robuste, split shipment, multi-entrepôt).
 4. Observabilité renforcée, RGPD complet, performance/cache avancé.
+5. Domaine H: signature PayPal webhook, wishlist serveur, API avis produits ; packaging Docker + CI multi-jobs (Domaine G).
 

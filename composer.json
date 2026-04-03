@@ -1,6 +1,6 @@
 {
   "name": "hypocommerce/hypocommerce-cms",
-  "description": "Hypocommerce CMS: open-source PHP e-commerce backend with GraphQL and REST APIs",
+  "description": "Hypocommerce CMS — open-source PHP e-commerce backend with GraphQL and REST APIs",
   "type": "project",
   "require": {
     "php": "^8.2",
@@ -36,7 +36,8 @@
     "security:audit": "composer audit --no-interaction",
     "security:sast": "phpstan analyse src/Infrastructure src/Application --configuration phpstan.neon --no-progress --memory-limit=512M",
     "test:coverage": "phpunit --configuration phpunit.xml --coverage-clover var/reports/clover.xml --coverage-text",
-    "coverage:check": "php bin/check_coverage.php"
+    "coverage:check": "php bin/check_coverage.php",
+    "seo:gate": "php bin/seo_quality_gate.php"
   },
   "minimum-stability": "stable",
   "prefer-stable": true

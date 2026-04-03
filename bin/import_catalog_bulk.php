@@ -50,8 +50,10 @@ function uuid4Bulk(): string
 }
 
 $insert = $pdo->prepare(
-    'INSERT INTO products (id, sku, name, slug, description, price, sale_price, status, type, seo_title, seo_description, created_at, updated_at)
-     VALUES (:id, :sku, :name, :slug, :description, :price, :sale_price, :status, :type, :seo_title, :seo_description, :created_at, :updated_at)
+    'INSERT INTO products (id, sku, name, slug, description, price, sale_price, status, type, seo_title, seo_description,
+     gtin, source_url, supplier_image_url, supplier_reference, currency, created_at, updated_at)
+     VALUES (:id, :sku, :name, :slug, :description, :price, :sale_price, :status, :type, :seo_title, :seo_description,
+     :gtin, :source_url, :supplier_image_url, :supplier_reference, :currency, :created_at, :updated_at)
      ON DUPLICATE KEY UPDATE
        name = VALUES(name),
        slug = VALUES(slug),
@@ -62,6 +64,11 @@ $insert = $pdo->prepare(
        type = VALUES(type),
        seo_title = VALUES(seo_title),
        seo_description = VALUES(seo_description),
+       gtin = COALESCE(VALUES(gtin), gtin),
+       source_url = COALESCE(VALUES(source_url), source_url),
+       supplier_image_url = COALESCE(VALUES(supplier_image_url), supplier_image_url),
+       supplier_reference = COALESCE(VALUES(supplier_reference), supplier_reference),
+       currency = VALUES(currency),
        updated_at = VALUES(updated_at)'
 );
 
@@ -93,6 +100,17 @@ foreach ($decoded as $i => $row) {
     if (!in_array($type, ['simple', 'variable', 'digital', 'bundle'], true)) {
         $type = 'simple';
     }
+    $eanRaw = trim((string) ($row['ean'] ?? $row['gtin'] ?? ''));
+    $gtin = $eanRaw !== '' ? substr($eanRaw, 0, 32) : null;
+    $sourceUrl = trim((string) ($row['sourceUrl'] ?? $row['source_url'] ?? ''));
+    $supplierImageUrl = trim((string) ($row['supplierImageUrl'] ?? $row['supplier_image_url'] ?? $row['image_url_hd'] ?? ''));
+    $ref = trim((string) ($row['supplierReference'] ?? $row['supplier_reference'] ?? $row['reference'] ?? ''));
+    $supplierRef = $ref !== '' ? substr($ref, 0, 128) : null;
+    $currency = strtoupper(trim((string) ($row['currency'] ?? 'EUR')));
+    if (strlen($currency) !== 3) {
+        $currency = 'EUR';
+    }
+
     $insert->execute([
         'id' => $id,
         'sku' => $sku,
@@ -105,6 +123,11 @@ foreach ($decoded as $i => $row) {
         'type' => $type,
         'seo_title' => isset($row['seoTitle']) ? (string) $row['seoTitle'] : null,
         'seo_description' => isset($row['seoDescription']) ? (string) $row['seoDescription'] : null,
+        'gtin' => $gtin,
+        'source_url' => $sourceUrl !== '' ? $sourceUrl : null,
+        'supplier_image_url' => $supplierImageUrl !== '' ? $supplierImageUrl : null,
+        'supplier_reference' => $supplierRef,
+        'currency' => $currency,
         'created_at' => $now,
         'updated_at' => $now,
     ]);

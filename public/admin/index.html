@@ -2,44 +2,18 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>Admin e-commerce</title>
+  <title>Hypocommerce CMS — Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/admin/styles.css">
 </head>
-<body class="bg-slate-950 text-slate-50">
-<div class="layout">
-  <aside class="sidebar">
-    <h1 class="logo">Shop Admin</h1>
-    <nav>
-      <a href="#" class="nav-item active">Dashboard</a>
-      <a href="#" class="nav-item">Produits</a>
-      <a href="#" class="nav-item">Commandes</a>
-      <a href="#" class="nav-item">Clients</a>
-      <a href="#" class="nav-item">Pages</a>
-      <a href="#" class="nav-item">Paramètres</a>
-    </nav>
-  </aside>
-  <main class="content">
-    <header class="topbar">
-      <div class="topbar-title">Dashboard</div>
-      <div class="topbar-user">Admin</div>
-    </header>
-    <section class="cards">
-      <article class="card">
-        <h2>Chiffre d'affaire (jour)</h2>
-        <p class="metric">0 €</p>
-      </article>
-      <article class="card">
-        <h2>Commandes en attente</h2>
-        <p class="metric">0</p>
-      </article>
-      <article class="card">
-        <h2>Clients</h2>
-        <p class="metric">0</p>
-      </article>
-    </section>
-  </main>
-</div>
+<body>
+  <div id="app"></div>
+  <script type="module" src="/admin/app.js"></script>
 </body>
 </html>
 

@@ -4,7 +4,7 @@
 
 Merci de ne pas ouvrir d'issue publique pour une faille de sécurité.
 
-- Contact privé mainteneurs: `security@nexora-cms.org`.
+- Contact privé mainteneurs: `security@hypocommerce-cms.org`.
 - Chiffrement optionnel: clé PGP partagée sur demande via le canal ci-dessus.
 - Fournissez: impact, vecteur d'attaque, PoC, version concernée.
 

@@ -87,7 +87,7 @@ final class CustomerAuthService
             'token' => $plainToken,
             'customer_id' => (string) $customer['id'],
         ]);
-        return $plainToken;
+        return 'ok';
     }
 
     public function resetPassword(string $token, string $newPassword): bool

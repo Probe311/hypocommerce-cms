@@ -1,4 +1,4 @@
-# Gouvernance Nexora
+# Gouvernance Hypocommerce CMS
 
 ## Rôles
 
@@ -7,7 +7,7 @@
 
 ## Maintainers initiaux
 
-- `@nexora-core` (équipe principale)
+- `@hypocommerce-core` (équipe principale)
 
 ## Process de décision
 

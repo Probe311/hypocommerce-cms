@@ -9,55 +9,55 @@ $dryRun = in_array('--dry-run', $argv, true);
 $now = (new DateTimeImmutable())->format('Y-m-d H:i:s');
 
 $pages = [
-    ['slug' => 'accueil', 'title' => "Faconner l'atmosphere", 'template' => 'home', 'meta_title' => 'Accueil - Atelier tactile', 'meta_description' => 'Univers editorial et boutique.'],
+    ['slug' => 'accueil', 'title' => "Façonner l'atmosphère", 'template' => 'home', 'meta_title' => 'Accueil — Le Grand Atelier', 'meta_description' => 'Univers éditorial et boutique.'],
     ['slug' => 'boutique', 'title' => 'Boutique', 'template' => 'boutique', 'meta_title' => 'Boutique', 'meta_description' => 'Catalogue produits dynamique.'],
     ['slug' => 'blog', 'title' => 'Journal', 'template' => 'blog', 'meta_title' => 'Journal', 'meta_description' => 'Guides et analyses atelier.'],
-    ['slug' => 'contact', 'title' => 'Contact', 'template' => 'contact', 'meta_title' => 'Contact', 'meta_description' => 'Coordonnees et support client.'],
-    ['slug' => 'faq', 'title' => 'Questions frequentes', 'template' => 'faq', 'meta_title' => 'FAQ', 'meta_description' => 'Questions frequentes: livraison, paiement, retours.'],
-    ['slug' => 'a-propos', 'title' => 'A propos', 'template' => 'generic', 'meta_title' => 'A propos', 'meta_description' => "L'histoire et la philosophie de l'atelier."],
-    ['slug' => 'livraison-retours', 'title' => 'Livraison et retours', 'template' => 'generic', 'meta_title' => 'Livraison et retours', 'meta_description' => 'Delais, transporteurs et retours.'],
+    ['slug' => 'contact', 'title' => 'Contact', 'template' => 'contact', 'meta_title' => 'Contact', 'meta_description' => 'Coordonnées et support client.'],
+    ['slug' => 'faq', 'title' => 'Questions fréquentes', 'template' => 'faq', 'meta_title' => 'FAQ', 'meta_description' => 'Questions fréquentes : livraison, paiement, retours.'],
+    ['slug' => 'a-propos', 'title' => 'À propos', 'template' => 'generic', 'meta_title' => 'À propos', 'meta_description' => "L'histoire et la philosophie de l'atelier."],
+    ['slug' => 'livraison-retours', 'title' => 'Livraison et retours', 'template' => 'generic', 'meta_title' => 'Livraison et retours', 'meta_description' => 'Délais, transporteurs et retours.'],
     ['slug' => 'services', 'title' => 'Services', 'template' => 'generic', 'meta_title' => 'Services', 'meta_description' => "Accompagnement et prestations de l'atelier."],
-    ['slug' => 'auteurs', 'title' => 'Auteurs', 'template' => 'generic', 'meta_title' => 'Auteurs', 'meta_description' => 'Equipe editoriale.'],
-    ['slug' => 'plan-du-site', 'title' => 'Plan du site', 'template' => 'generic', 'meta_title' => 'Plan du site', 'meta_description' => 'Navigation complete du site.'],
+    ['slug' => 'auteurs', 'title' => 'Auteurs', 'template' => 'generic', 'meta_title' => 'Auteurs', 'meta_description' => 'Équipe éditoriale.'],
+    ['slug' => 'plan-du-site', 'title' => 'Plan du site', 'template' => 'generic', 'meta_title' => 'Plan du site', 'meta_description' => 'Navigation complète du site.'],
     ['slug' => 'recherche', 'title' => 'Recherche', 'template' => 'generic', 'meta_title' => 'Recherche', 'meta_description' => 'Trouver produits et articles.'],
-    ['slug' => 'commande', 'title' => 'Commande', 'template' => 'generic', 'meta_title' => 'Commande', 'meta_description' => 'Etapes de commande.'],
+    ['slug' => 'commande', 'title' => 'Commande', 'template' => 'generic', 'meta_title' => 'Commande', 'meta_description' => 'Étapes de commande.'],
     ['slug' => 'panier', 'title' => 'Panier', 'template' => 'generic', 'meta_title' => 'Panier', 'meta_description' => 'Votre panier en cours.'],
     ['slug' => 'compte', 'title' => 'Compte', 'template' => 'generic', 'meta_title' => 'Compte', 'meta_description' => 'Espace client et historique.'],
-    ['slug' => 'configurateur-socles', 'title' => 'Configurateur de socles', 'template' => 'generic', 'meta_title' => 'Configurateur de socles', 'meta_description' => 'Creer un socle personnalise.'],
+    ['slug' => 'configurateur-socles', 'title' => 'Configurateur de socles', 'template' => 'generic', 'meta_title' => 'Configurateur de socles', 'meta_description' => 'Créer un socle personnalisé.'],
 ];
 
 $faqItems = [
-    ['question' => 'Quels sont les delais de livraison ?', 'answer' => 'Une estimation est affichee au panier avant validation.', 'order_index' => 1],
-    ['question' => 'Puis-je retourner un article ?', 'answer' => 'Oui, selon les conditions legales de retractation.', 'order_index' => 2],
-    ['question' => 'Les prix incluent-ils la TVA ?', 'answer' => 'Les prix affiches sont TTC sauf mention contraire.', 'order_index' => 3],
+    ['question' => 'Quels sont les délais de livraison ?', 'answer' => 'Une estimation est affichée au panier avant validation.', 'order_index' => 1],
+    ['question' => 'Puis-je retourner un article ?', 'answer' => 'Oui, selon les conditions légales de rétractation.', 'order_index' => 2],
+    ['question' => 'Les prix incluent-ils la TVA ?', 'answer' => 'Les prix affichés sont TTC sauf mention contraire.', 'order_index' => 3],
 ];
 
 $legalPages = [
     [
         'slug' => 'mentions-legales',
-        'title' => 'Mentions legales',
+        'title' => 'Mentions légales',
         'paragraphs' => [
-            'Editeur du site : Societe Exemple SARL.',
-            'Directeur de publication : Nom Prenom.',
+            'Éditeur du site : Société Exemple SARL.',
+            'Directeur de publication : Nom Prénom.',
             'Contact : contact@example.com',
         ],
     ],
     [
         'slug' => 'cgv',
-        'title' => 'Conditions generales de vente',
+        'title' => 'Conditions générales de vente',
         'paragraphs' => [
             'Les presentes CGV regissent les ventes conclues sur la boutique en ligne.',
-            'Prix TTC, modalites de paiement et delais de livraison indiques a la commande.',
-            'Droit de retractation : 14 jours sous conditions.',
+            'Prix TTC, modalités de paiement et délais de livraison indiqués à la commande.',
+            'Droit de rétractation : 14 jours sous conditions.',
         ],
     ],
     [
         'slug' => 'confidentialite',
-        'title' => 'Politique de confidentialite',
+        'title' => 'Politique de confidentialité',
         'paragraphs' => [
-            'Donnees collectees : identification, commandes, navigation.',
-            'Finalites : traitement des commandes, support client, amelioration du service.',
-            'Droits RGPD : acces, rectification, effacement.',
+            'Données collectées : identification, commandes, navigation.',
+            'Finalités : traitement des commandes, support client, amélioration du service.',
+            'Droits RGPD : accès, rectification, effacement.',
         ],
     ],
 ];
@@ -67,7 +67,7 @@ $blogCategories = [
     ['slug' => 'atelier', 'name' => 'Atelier'],
     ['slug' => 'lore', 'name' => 'Univers'],
     ['slug' => 'showcase', 'name' => 'Vitrine'],
-    ['slug' => 'news', 'name' => 'Actualites'],
+    ['slug' => 'news', 'name' => 'Actualités'],
 ];
 
 $blogArticles = [
@@ -75,17 +75,17 @@ $blogArticles = [
         'category_slug' => 'guides',
         'slug' => 'choisir-mobilier-durable',
         'title' => 'Comment choisir un mobilier durable',
-        'excerpt' => 'Les criteres matiere, finition et cycle de vie pour un achat eclaire.',
-        'body' => "Le mobilier durable combine esthetique et empreinte maitrisee.\n\nPrivilegiez des essences certifiees et des pieces reparables.",
+        'excerpt' => 'Les critères matière, finition et cycle de vie pour un achat éclairé.',
+        'body' => "Le mobilier durable combine esthétique et empreinte maîtrisée.\n\nPrivilégiez des essences certifiées et des pièces réparables.",
         'author_name' => 'Claire Martin',
         'author_job_title' => 'Responsable contenu',
     ],
     [
         'category_slug' => 'atelier',
         'slug' => 'eclairer-son-interieur',
-        'title' => 'Eclairer son interieur sans gaspiller',
-        'excerpt' => 'Temperature de couleur, flux lumineux et points d accent pour un rendu equilibre.',
-        'body' => "Une bonne strategie lumineuse combine lumiere generale, d appoint et d accentuation.\n\nPensez aux variateurs et aux zones de circulation.",
+        'title' => 'Éclairer son intérieur sans gaspiller',
+        'excerpt' => 'Température de couleur, flux lumineux et points d’accent pour un rendu équilibré.',
+        'body' => "Une bonne stratégie lumineuse combine lumière générale, d’appoint et d’accentuation.\n\nPensez aux variateurs et aux zones de circulation pour adapter l’intensité à chaque moment de la journée.",
         'author_name' => 'Claire Martin',
         'author_job_title' => 'Responsable contenu',
     ],

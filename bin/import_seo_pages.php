@@ -9,7 +9,7 @@ $host = $argv[1] ?? ($_ENV['DB_HOST'] ?? null);
 $db = $argv[2] ?? ($_ENV['DB_NAME'] ?? null);
 $user = $argv[3] ?? ($_ENV['DB_USER'] ?? null);
 $password = $argv[4] ?? ($_ENV['DB_PASSWORD'] ?? null);
-$jsonPath = $argv[5] ?? dirname(__DIR__, 2) . '/seo-suppliers/seo-strategy/contenus-20-pages-enrichi.json';
+$jsonPath = $argv[5] ?? dirname(__DIR__, 2) . '/seo-suppliers/donnees/contenu/pages-editoriales-enrichies.json';
 $dryRun = in_array('--dry-run', $argv, true);
 
 if (!is_string($host) || !is_string($db) || !is_string($user) || !is_string($password) || $host === '' || $db === '' || $user === '') {
@@ -93,7 +93,7 @@ function makePayload(array $page, string $template): array
 {
     return [
         'template' => $template,
-        'source' => 'contenus-20-pages-enrichi',
+        'source' => 'pages-editoriales-enrichies',
         'hero' => [
             'title' => trim((string) ($page['h1'] ?? $page['title'] ?? '')),
             'subtitle' => trim((string) ($page['metaDescription'] ?? '')),
@@ -167,27 +167,27 @@ $rows[] = [
 
 $faqEntries = array_merge($categories, $tutorials, $comparatifs, [$home]);
 $faqPayload = makePayload($home, 'faq');
-$faqPayload['hero']['title'] = 'Questions frequentes';
-$faqPayload['hero']['subtitle'] = 'Reponses rapides pour choisir vos produits et finaliser votre commande.';
+$faqPayload['hero']['title'] = 'Questions fréquentes';
+$faqPayload['hero']['subtitle'] = 'Réponses rapides pour choisir vos produits et finaliser votre commande.';
 $faqPayload['faq'] = aggregateFaq($faqEntries);
 $rows[] = [
     'slug' => 'faq',
-    'title' => 'Questions frequentes',
-    'meta_title' => 'FAQ | Atelier Tactile',
-    'meta_description' => 'Questions frequentes: choix des sets, application des peintures, livraison et retours.',
+    'title' => 'Questions fréquentes',
+    'meta_title' => 'FAQ | Le Grand Atelier',
+    'meta_description' => 'Questions fréquentes : choix des sets, application des peintures, livraison et retours.',
     'content' => json_encode($faqPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     'published_at' => $now,
 ];
 
 $contactPayload = makePayload($home, 'contact');
 $contactPayload['hero']['title'] = 'Contact et accompagnement';
-$contactPayload['hero']['subtitle'] = 'Parlez avec l equipe pour choisir vos sets et planifier vos projets de peinture.';
+$contactPayload['hero']['subtitle'] = 'Parlez avec l’équipe pour choisir vos sets et planifier vos projets de peinture.';
 $contactPayload['faq'] = array_slice(aggregateFaq($faqEntries), 0, 4);
 $rows[] = [
     'slug' => 'contact',
     'title' => 'Contact et accompagnement',
-    'meta_title' => 'Contact | Atelier Tactile',
-    'meta_description' => 'Contactez notre equipe pour un conseil pre-achat ou une recommandation de set.',
+    'meta_title' => 'Contact | Le Grand Atelier',
+    'meta_description' => 'Contactez notre équipe pour un conseil pré-achat ou une recommandation de set.',
     'content' => json_encode($contactPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     'published_at' => $now,
 ];
@@ -207,7 +207,7 @@ $boutiquePayload['brandPages'] = array_values(array_map(
 $rows[] = [
     'slug' => 'boutique',
     'title' => mb_substr((string) ($boutiquePayload['hero']['title'] ?: 'Boutique'), 0, 255),
-    'meta_title' => 'Boutique | Atelier Tactile',
+    'meta_title' => 'Boutique | Le Grand Atelier',
     'meta_description' => mb_substr((string) ($boutiqueSource['metaDescription'] ?? ''), 0, 255) ?: null,
     'content' => json_encode($boutiquePayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     'published_at' => $now,
@@ -224,7 +224,7 @@ $blogPayload['sections'] = array_values(array_merge(
 $rows[] = [
     'slug' => 'blog',
     'title' => mb_substr((string) ($blogPayload['hero']['title'] ?: 'Blog'), 0, 255),
-    'meta_title' => 'Blog | Atelier Tactile',
+    'meta_title' => 'Blog | Le Grand Atelier',
     'meta_description' => mb_substr((string) ($blogSource['metaDescription'] ?? ''), 0, 255) ?: null,
     'content' => json_encode($blogPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
     'published_at' => $now,

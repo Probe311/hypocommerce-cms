@@ -63,6 +63,20 @@ $statements = [
         UNIQUE KEY uniq_blog_category_slug (category_id, slug),
         CONSTRAINT fk_blog_articles_category FOREIGN KEY (category_id) REFERENCES blog_categories(id) ON DELETE RESTRICT
     )",
+    'CREATE TABLE IF NOT EXISTS blog_tags (
+        id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        slug VARCHAR(120) NOT NULL UNIQUE,
+        name VARCHAR(120) NOT NULL,
+        created_at DATETIME NOT NULL,
+        updated_at DATETIME NOT NULL
+    )',
+    'CREATE TABLE IF NOT EXISTS blog_article_tags (
+        article_id INT UNSIGNED NOT NULL,
+        tag_id INT UNSIGNED NOT NULL,
+        PRIMARY KEY (article_id, tag_id),
+        CONSTRAINT fk_blog_article_tags_article FOREIGN KEY (article_id) REFERENCES blog_articles(id) ON DELETE CASCADE,
+        CONSTRAINT fk_blog_article_tags_tag FOREIGN KEY (tag_id) REFERENCES blog_tags(id) ON DELETE CASCADE
+    )',
     'CREATE TABLE IF NOT EXISTS blog_article_blocks (
         id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         article_id INT UNSIGNED NOT NULL,
@@ -120,6 +134,7 @@ $statements = [
         created_at DATETIME NOT NULL,
         updated_at DATETIME NOT NULL
     )",
+    'CREATE INDEX idx_blog_article_tags_tag_id ON blog_article_tags(tag_id)',
 ];
 
 try {

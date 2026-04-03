@@ -1,6 +1,6 @@
 # Versioning policy (SemVer)
 
-Nexora suit Semantic Versioning:
+Hypocommerce CMS suit Semantic Versioning :
 
 - `MAJOR`: changements incompatibles API/contrats publics.
 - `MINOR`: fonctionnalités rétro-compatibles.

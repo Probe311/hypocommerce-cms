@@ -5,7 +5,7 @@ Point d'entree: `POST /graphql`
 ## Conventions generales
 - Requetes GraphQL standard: `{ query, variables }`
 - Auth client: argument `customerToken` sur les operations protegees.
-- Auth admin: hors GraphQL (REST `/api/v1/admin/*`).
+- Auth admin: operations admin disponibles en GraphQL via argument `adminToken` (Bearer admin JWT).
 - Monnaie: valeurs en `float`, devise majoritairement `EUR`.
 
 ## Conventions d'erreurs
@@ -36,6 +36,22 @@ Point d'entree: `POST /graphql`
 - `validateCoupon(sessionId, couponCode, customerToken): String`
 - `customerProfile(customerToken): Customer`
 - `customerAddresses(customerToken): [CustomerAddress]`
+- `cmsArticles(categorySlug): [CmsArticle]`
+- `cmsArticleCategories: [CmsCategory]`
+- `cmsNavigation(location): [CmsNavItem]` (`header|footer|secondary`)
+- `eeatScores(adminToken, entityType, limit, offset): [EeatScore]`
+- `eeatScore(adminToken, entityType, entityId, locale): EeatScore`
+- `eeatOverview(adminToken): EeatOverview`
+- `eeatOpportunities(adminToken, entityType, limit, offset): [EeatOpportunity]`
+- `eeatQuickWins(adminToken, entityType, limit, offset): [EeatQuickWin]`
+- `eeatProgress(adminToken): EeatProgress`
+- `eeatRunTrends(adminToken, limit): [EeatRunTrend]`
+- `eeatRecommendationOwners(adminToken): [EeatOwnerBucket]`
+- `eeatOverdueRecommendations(adminToken, owner, limit, offset): [EeatRecommendation]`
+- `eeatSla(adminToken): EeatSla`
+- `eeatCriticalOverdue(adminToken, limit): [EeatRecommendation]`
+- `eeatDueSoonRecommendations(adminToken, owner, days, limit, offset): [EeatRecommendation]`
+- `eeatDigest(adminToken, days): EeatDigest`
 
 ## Mutations
 - `addToCart(sessionId, productId, variantId, quantity): Cart`
@@ -65,6 +81,9 @@ Point d'entree: `POST /graphql`
 - `adminDeleteCoupon(adminToken, code): String`
 - `adminUpsertSetting(adminToken, key, valueJson): String` (`super_admin`)
 - `adminDeleteSetting(adminToken, key): String` (`super_admin`)
+- `eeatUpdateRecommendationStatus(adminToken, id, status): String`
+- `eeatAssignRecommendation(adminToken, id, owner, dueDate, note): String`
+- `eeatAutoPrioritizeCriticalOverdue(adminToken, dryRun, limit): EeatAutoPrioritizeResult`
 
 ## Notes d'implementation
 - Validation centralisee via `InputValidator`.

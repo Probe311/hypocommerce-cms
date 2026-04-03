@@ -4,6 +4,7 @@ CREATE TABLE products (
     id CHAR(36) NOT NULL PRIMARY KEY,
     sku VARCHAR(64) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
+    normalized_name_fr VARCHAR(255) NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
     description TEXT NULL,
     price DECIMAL(10,2) NOT NULL,
@@ -12,8 +13,27 @@ CREATE TABLE products (
     type ENUM('simple','variable','digital','bundle') NOT NULL DEFAULT 'simple',
     seo_title VARCHAR(255) NULL,
     seo_description VARCHAR(255) NULL,
+    gtin VARCHAR(32) NULL,
+    mpn VARCHAR(64) NULL,
+    editorial_author VARCHAR(120) NULL,
+    editorial_reviewer VARCHAR(120) NULL,
+    reviewed_at DATETIME NULL,
     created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL
+    updated_at DATETIME NOT NULL,
+    main_category_id INT UNSIGNED NULL,
+    sub_category_id INT UNSIGNED NULL,
+    normalized_color VARCHAR(80) NULL,
+    source_url VARCHAR(2048) NULL,
+    supplier_image_url VARCHAR(2048) NULL,
+    supplier_reference VARCHAR(128) NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'EUR',
+    is_featured TINYINT(1) NOT NULL DEFAULT 0,
+    weight_kg DECIMAL(10,4) NULL,
+    length_cm DECIMAL(10,2) NULL,
+    width_cm DECIMAL(10,2) NULL,
+    height_cm DECIMAL(10,2) NULL,
+    CONSTRAINT fk_products_main_category FOREIGN KEY (main_category_id) REFERENCES product_categories(id) ON DELETE SET NULL,
+    CONSTRAINT fk_products_sub_category FOREIGN KEY (sub_category_id) REFERENCES product_categories(id) ON DELETE SET NULL
 );
 
 CREATE TABLE product_variants (
@@ -36,12 +56,48 @@ CREATE TABLE product_categories (
     CONSTRAINT fk_product_categories_parent FOREIGN KEY (parent_id) REFERENCES product_categories(id) ON DELETE SET NULL
 );
 
+CREATE TABLE brands (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    logo_url VARCHAR(255) NULL,
+    favicon_url VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
+CREATE TABLE product_brand_pivot (
+    product_id CHAR(36) NOT NULL,
+    brand_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (product_id, brand_id),
+    CONSTRAINT fk_pbp_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_pbp_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE CASCADE
+);
+
 CREATE TABLE product_category_pivot (
     product_id CHAR(36) NOT NULL,
     category_id INT UNSIGNED NOT NULL,
     PRIMARY KEY (product_id, category_id),
     CONSTRAINT fk_pcp_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     CONSTRAINT fk_pcp_category FOREIGN KEY (category_id) REFERENCES product_categories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE product_tags (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(80) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
+CREATE TABLE product_tag_pivot (
+    product_id CHAR(36) NOT NULL,
+    tag_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (product_id, tag_id),
+    CONSTRAINT fk_ptp_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_ptp_tag FOREIGN KEY (tag_id) REFERENCES product_tags(id) ON DELETE CASCADE
 );
 
 CREATE TABLE product_category_translations (
@@ -61,6 +117,21 @@ CREATE TABLE product_images (
     position INT NOT NULL DEFAULT 0,
     CONSTRAINT fk_product_images_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
+
+
+-- Caracteristiques techniques (voir migrations/024_product_technical_specs.sql)
+CREATE TABLE product_technical_specs (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    product_id CHAR(36) NOT NULL,
+    label VARCHAR(255) NOT NULL,
+    value TEXT NOT NULL,
+    position INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_product_technical_specs_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    INDEX idx_product_technical_specs_product_id (product_id),
+    INDEX idx_product_technical_specs_product_id_position (product_id, position)
+)
 
 CREATE TABLE product_attributes (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -369,6 +440,12 @@ CREATE TABLE audit_logs (
 CREATE INDEX idx_products_slug ON products(slug);
 CREATE INDEX idx_products_status ON products(status);
 CREATE INDEX idx_products_type ON products(type);
+CREATE INDEX idx_products_main_category_id ON products(main_category_id);
+CREATE INDEX idx_products_sub_category_id ON products(sub_category_id);
+CREATE INDEX idx_products_normalized_color ON products(normalized_color);
+CREATE INDEX idx_brands_slug ON brands(slug);
+CREATE INDEX idx_product_tags_slug ON product_tags(slug);
+CREATE INDEX idx_product_tags_type ON product_tags(type);
 
 CREATE INDEX idx_customers_email ON customers(email);
 CREATE INDEX idx_orders_status ON orders(status);
@@ -453,6 +530,22 @@ CREATE TABLE IF NOT EXISTS blog_articles (
     CONSTRAINT fk_blog_articles_category FOREIGN KEY (category_id) REFERENCES blog_categories(id) ON DELETE RESTRICT
 );
 
+CREATE TABLE IF NOT EXISTS blog_tags (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    slug VARCHAR(120) NOT NULL UNIQUE,
+    name VARCHAR(120) NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS blog_article_tags (
+    article_id INT UNSIGNED NOT NULL,
+    tag_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (article_id, tag_id),
+    CONSTRAINT fk_blog_article_tags_article FOREIGN KEY (article_id) REFERENCES blog_articles(id) ON DELETE CASCADE,
+    CONSTRAINT fk_blog_article_tags_tag FOREIGN KEY (tag_id) REFERENCES blog_tags(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS blog_article_blocks (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
     article_id INT UNSIGNED NOT NULL,
@@ -463,6 +556,8 @@ CREATE TABLE IF NOT EXISTS blog_article_blocks (
     updated_at DATETIME NOT NULL,
     CONSTRAINT fk_blog_blocks_article FOREIGN KEY (article_id) REFERENCES blog_articles(id) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_blog_article_tags_tag_id ON blog_article_tags(tag_id);
 
 CREATE TABLE IF NOT EXISTS faq_categories (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

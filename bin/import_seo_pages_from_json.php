@@ -11,7 +11,7 @@ $host = $argv[1];
 $db = $argv[2];
 $user = $argv[3];
 $password = $argv[4];
-$jsonPath = $argv[5] ?? dirname(__DIR__, 2) . '/seo-suppliers/seo-strategy/contenus-20-pages-enrichi.json';
+$jsonPath = $argv[5] ?? dirname(__DIR__, 2) . '/seo-suppliers/donnees/contenu/pages-editoriales-enrichies.json';
 
 if (!is_file($jsonPath)) {
     fwrite(STDERR, "JSON SEO introuvable: {$jsonPath}\n");

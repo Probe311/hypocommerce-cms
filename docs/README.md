@@ -1,4 +1,4 @@
-# Documentation Nexora
+# Documentation Hypocommerce CMS
 
 ## Démarrage
 

@@ -40,6 +40,12 @@ final class JwtService
             throw new RuntimeException('invalid_token_signature');
         }
 
+        $headerRaw = $this->base64UrlDecode($headerPart);
+        $header = json_decode($headerRaw, true);
+        if (!is_array($header) || (string) ($header['alg'] ?? '') !== 'HS256' || (string) ($header['typ'] ?? '') !== 'JWT') {
+            throw new RuntimeException('invalid_token_header');
+        }
+
         $payloadRaw = $this->base64UrlDecode($payloadPart);
         $payload = json_decode($payloadRaw, true);
         if (!is_array($payload)) {

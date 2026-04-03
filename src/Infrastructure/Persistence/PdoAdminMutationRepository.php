@@ -45,6 +45,11 @@ final class PdoAdminMutationRepository
             'type' => (string) ($payload['type'] ?? 'simple'),
             'seo_title' => $payload['seoTitle'] ?? null,
             'seo_description' => $payload['seoDescription'] ?? null,
+            'gtin' => $payload['gtin'] ?? null,
+            'mpn' => $payload['mpn'] ?? null,
+            'editorial_author' => $payload['editorialAuthor'] ?? null,
+            'editorial_reviewer' => $payload['editorialReviewer'] ?? null,
+            'reviewed_at' => $payload['reviewedAt'] ?? null,
             'updated_at' => $now,
         ];
 
@@ -52,16 +57,18 @@ final class PdoAdminMutationRepository
             $update = $this->pdo->prepare(
                 'UPDATE products
                  SET sku = :sku, name = :name, slug = :slug, description = :description, price = :price, sale_price = :sale_price,
-                     status = :status, type = :type, seo_title = :seo_title, seo_description = :seo_description, updated_at = :updated_at
+                     status = :status, type = :type, seo_title = :seo_title, seo_description = :seo_description, gtin = :gtin,
+                     mpn = :mpn, editorial_author = :editorial_author, editorial_reviewer = :editorial_reviewer, reviewed_at = :reviewed_at,
+                     updated_at = :updated_at
                  WHERE id = :id'
             );
             $update->execute($params);
         } else {
             $insert = $this->pdo->prepare(
                 'INSERT INTO products
-                 (id, sku, name, slug, description, price, sale_price, status, type, seo_title, seo_description, created_at, updated_at)
+                 (id, sku, name, slug, description, price, sale_price, status, type, seo_title, seo_description, gtin, mpn, editorial_author, editorial_reviewer, reviewed_at, created_at, updated_at)
                  VALUES
-                 (:id, :sku, :name, :slug, :description, :price, :sale_price, :status, :type, :seo_title, :seo_description, :created_at, :updated_at)'
+                 (:id, :sku, :name, :slug, :description, :price, :sale_price, :status, :type, :seo_title, :seo_description, :gtin, :mpn, :editorial_author, :editorial_reviewer, :reviewed_at, :created_at, :updated_at)'
             );
             $insert->execute(array_merge($params, ['created_at' => $now]));
         }
@@ -204,6 +211,26 @@ final class PdoAdminMutationRepository
             if (array_key_exists('seoDescription', $op)) {
                 $sets[] = 'seo_description = :seo_description';
                 $params['seo_description'] = $op['seoDescription'];
+            }
+            if (array_key_exists('gtin', $op)) {
+                $sets[] = 'gtin = :gtin';
+                $params['gtin'] = $op['gtin'];
+            }
+            if (array_key_exists('mpn', $op)) {
+                $sets[] = 'mpn = :mpn';
+                $params['mpn'] = $op['mpn'];
+            }
+            if (array_key_exists('editorialAuthor', $op)) {
+                $sets[] = 'editorial_author = :editorial_author';
+                $params['editorial_author'] = $op['editorialAuthor'];
+            }
+            if (array_key_exists('editorialReviewer', $op)) {
+                $sets[] = 'editorial_reviewer = :editorial_reviewer';
+                $params['editorial_reviewer'] = $op['editorialReviewer'];
+            }
+            if (array_key_exists('reviewedAt', $op)) {
+                $sets[] = 'reviewed_at = :reviewed_at';
+                $params['reviewed_at'] = $op['reviewedAt'];
             }
             if ($sets === []) {
                 $errors[] = "row {$idx}: no_fields_to_update";

@@ -12,13 +12,23 @@ final class StripePaymentProvider
 {
     private const ALLOWED_MODES = ['payment', 'setup', 'subscription'];
 
-    public function __construct()
+    public function __construct(
+        private readonly PluginPaymentConfigResolver $configResolver = new PluginPaymentConfigResolver()
+    )
     {
-        $secretKey = $_ENV['STRIPE_SECRET_KEY'] ?? null;
+        $runtime = $this->configResolver->resolve('stripe');
+        $cfg = $runtime['config'];
+        $secretKey = $cfg['stripeSecretKey']
+            ?? $cfg['secretKey']
+            ?? ($_ENV['STRIPE_SECRET_KEY'] ?? null);
         if ($secretKey === null) {
             throw new RuntimeException('STRIPE_SECRET_KEY is not configured');
         }
 
+        $secretKey = trim((string) $secretKey);
+        if ($secretKey === '') {
+            throw new RuntimeException('STRIPE_SECRET_KEY is not configured');
+        }
         Stripe::setApiKey($secretKey);
     }
 

@@ -1,0 +1,1 @@
+ALTER TABLE products ADD COLUMN gtin VARCHAR(32) NULL;

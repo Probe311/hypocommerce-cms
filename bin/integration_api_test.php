@@ -56,7 +56,7 @@ if (!assertStatus('GET /health', $healthResponse->getStatusCode(), 200)) {
     $failures++;
 }
 
-// 2) Register customer
+// 2) Register customer (GraphQL)
 $registerBody = json_encode([
     'query' => 'mutation Register($email:String!,$password:String!){ registerCustomer(email:$email,password:$password){ customerId token } }',
     'variables' => [
@@ -76,7 +76,7 @@ if ($customerToken === '') {
     $failures++;
 }
 
-// 3) Add to cart + checkout (idempotent)
+// 3) Add to cart + checkout (idempotent, GraphQL)
 $sessionId = 'itest-' . time();
 $addToCartBody = json_encode([
     'query' => 'mutation Add($sessionId:String!,$productId:String!,$quantity:Int!){ addToCart(sessionId:$sessionId,productId:$productId,quantity:$quantity){ id total } }',
@@ -129,6 +129,75 @@ if (!in_array($adminLoginResponse->getStatusCode(), [401, 422], true)) {
     $failures++;
 } else {
     fwrite(STDOUT, "[OK] admin login guarded\n");
+}
+
+// 5) Storefront REST: /auth/register, /auth/login, /checkout/quote, /checkout/orders, /account/orders
+$restEmail = 'rest+' . time() . '@example.test';
+$restPassword = 'Passw0rd!123';
+
+$restRegisterBody = json_encode([
+    'email' => $restEmail,
+    'password' => $restPassword,
+], JSON_UNESCAPED_SLASHES) ?: '{}';
+$restRegisterResponse = $kernel->handle(Request::create('/auth/register', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], $restRegisterBody));
+if (!assertStatus('REST /auth/register', $restRegisterResponse->getStatusCode(), 201)) {
+    $failures++;
+}
+$restRegisterDecoded = json_decode((string) $restRegisterResponse->getContent(), true);
+$restToken = (string) ($restRegisterDecoded['token'] ?? '');
+if ($restToken === '') {
+    fwrite(STDERR, "[FAIL] REST /auth/register token missing\n");
+    $failures++;
+}
+
+$restLoginBody = json_encode([
+    'email' => $restEmail,
+    'password' => $restPassword,
+], JSON_UNESCAPED_SLASHES) ?: '{}';
+$restLoginResponse = $kernel->handle(Request::create('/auth/login', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], $restLoginBody));
+if (!assertStatus('REST /auth/login', $restLoginResponse->getStatusCode(), 200)) {
+    $failures++;
+}
+
+$sessionIdRest = 'rest-itest-' . time();
+$quoteBody = json_encode([
+    'sessionId' => $sessionIdRest,
+], JSON_UNESCAPED_SLASHES) ?: '{}';
+$quoteResponse = $kernel->handle(Request::create('/checkout/quote', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], $quoteBody));
+if (!assertStatus('REST /checkout/quote', $quoteResponse->getStatusCode(), 200)) {
+    $failures++;
+}
+
+$checkoutRestBody = json_encode([
+    'sessionId' => $sessionIdRest,
+    'contact' => [
+        'email' => $restEmail,
+        'firstName' => 'Rest',
+        'lastName' => 'Test',
+    ],
+    'shippingAddress' => [
+        'line1' => '1 rue REST',
+        'city' => 'Paris',
+        'postcode' => '75001',
+        'country' => 'FR',
+    ],
+    'billingAddress' => [
+        'line1' => '1 rue REST',
+        'city' => 'Paris',
+        'postcode' => '75001',
+        'country' => 'FR',
+    ],
+    'paymentMethod' => 'stripe',
+], JSON_UNESCAPED_SLASHES) ?: '{}';
+$checkoutRestResponse = $kernel->handle(Request::create('/checkout/orders', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], $checkoutRestBody));
+if (!assertStatus('REST /checkout/orders', $checkoutRestResponse->getStatusCode(), 201)) {
+    $failures++;
+}
+
+$accountOrdersRequest = Request::create('/account/orders', 'GET', [], [], [], ['HTTP_AUTHORIZATION' => 'Bearer ' . $restToken]);
+$accountOrdersResponse = $kernel->handle($accountOrdersRequest);
+if (!assertStatus('REST GET /account/orders', $accountOrdersResponse->getStatusCode(), 200)) {
+    $failures++;
 }
 
 if ($failures > 0) {

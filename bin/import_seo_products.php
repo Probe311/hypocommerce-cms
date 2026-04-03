@@ -9,7 +9,7 @@ if ($argc < 2) {
 }
 
 $dryRun = in_array('--dry-run', $argv, true);
-$jsonPath = $argv[5] ?? dirname(__DIR__, 2) . '/seo-suppliers/normalized/products_normalized_deduped.json';
+$jsonPath = $argv[5] ?? dirname(__DIR__, 2) . '/seo-suppliers/donnees/produits/produits-normalises-dedup.json';
 
 if (!is_file($jsonPath)) {
     fwrite(STDERR, "JSON source introuvable: {$jsonPath}\n");

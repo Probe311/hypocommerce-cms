@@ -21,7 +21,9 @@ final class HealthController
             $row = $pdo->query('SELECT 1 AS ok')->fetch();
             $dbOk = is_array($row) && (int) ($row['ok'] ?? 0) === 1;
         } catch (Throwable $e) {
-            $dbError = $e->getMessage();
+            $appEnv = strtolower((string) ($_ENV['APP_ENV'] ?? 'dev'));
+            $isProd = $appEnv === 'prod' || $appEnv === 'production';
+            $dbError = $isProd ? 'database_unavailable' : $e->getMessage();
         }
 
         $payload = [

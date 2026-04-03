@@ -4,8 +4,15 @@ declare(strict_types=1);
 
 namespace App\Application\Shipping;
 
+use App\Plugin\Registry\PluginRegistry;
+
 final class ShippingService
 {
+    public function __construct(
+        private readonly PluginRegistry $pluginRegistry = new PluginRegistry(),
+    ) {
+    }
+
     /**
      * @return array<int,array{id:string,label:string,carrier:string,price:float,etaMinDays:int,etaMaxDays:int}>
      */
@@ -44,7 +51,11 @@ final class ShippingService
             ];
         }
 
-        return $result;
+        foreach ($this->pluginRegistry->enabledExtraShippingMethods($country, $cartSubTotal) as $extra) {
+            $result[] = $extra;
+        }
+
+        return $this->normalizeAndSortMethods($result);
     }
 
     private function resolveZone(string $country): string
@@ -58,5 +69,41 @@ final class ShippingService
         }
 
         return 'INTL';
+    }
+
+    /**
+     * @param array<int,array{id:string,label:string,carrier:string,price:float,etaMinDays:int,etaMaxDays:int}> $methods
+     * @return array<int,array{id:string,label:string,carrier:string,price:float,etaMinDays:int,etaMaxDays:int}>
+     */
+    private function normalizeAndSortMethods(array $methods): array
+    {
+        $normalized = [];
+        $seen = [];
+        foreach ($methods as $row) {
+            $id = trim((string) ($row['id'] ?? ''));
+            if ($id === '' || isset($seen[$id])) {
+                continue;
+            }
+            $seen[$id] = true;
+            $etaMin = max(1, (int) ($row['etaMinDays'] ?? 2));
+            $etaMax = max($etaMin, (int) ($row['etaMaxDays'] ?? 5));
+            $normalized[] = [
+                'id' => $id,
+                'label' => (string) ($row['label'] ?? $id),
+                'carrier' => (string) ($row['carrier'] ?? 'unknown'),
+                'price' => max(0.0, (float) ($row['price'] ?? 0.0)),
+                'etaMinDays' => $etaMin,
+                'etaMaxDays' => $etaMax,
+            ];
+        }
+
+        usort($normalized, static function (array $a, array $b): int {
+            if ($a['price'] === $b['price']) {
+                return $a['etaMinDays'] <=> $b['etaMinDays'];
+            }
+            return $a['price'] <=> $b['price'];
+        });
+
+        return $normalized;
     }
 }

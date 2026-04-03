@@ -18,6 +18,6 @@ assignees: ''
 
 ## Environnement
 
-- Version Nexora:
+- Version Hypocommerce CMS :
 - PHP:
 - MySQL:

@@ -8,6 +8,7 @@ use App\Application\Payment\Provider\PaymentProviderRegistry;
 use App\Application\Shared\HookDispatcher;
 use App\Infrastructure\Payment\Provider\PaypalCheckoutPaymentProvider;
 use App\Infrastructure\Payment\Provider\StripeCheckoutPaymentProvider;
+use App\Infrastructure\Persistence\PdoAdminPluginRepository;
 use App\Infrastructure\Persistence\PdoOrderRepository;
 use Ramsey\Uuid\Uuid;
 use RuntimeException;
@@ -50,6 +51,9 @@ final class PaymentOrchestrator
         if (!in_array($resolvedProvider, ['stripe', 'paypal'], true)) {
             throw new RuntimeException('invalid_payment_provider');
         }
+        if (!(new PdoAdminPluginRepository())->isEnabled($resolvedProvider)) {
+            throw new RuntimeException('payment_provider_disabled');
+        }
 
         if (!$this->providerRegistry->has($resolvedProvider)) {
             throw new RuntimeException('invalid_payment_provider');
@@ -58,6 +62,25 @@ final class PaymentOrchestrator
         if ($provider === null) {
             throw new RuntimeException('invalid_payment_provider');
         }
+
+        // Idempotence pragmatique: si une session récente est déjà initiée/authorized, on la réutilise.
+        $latest = $this->orderRepository->findLatestOrderPaymentByProvider($order->id(), $resolvedProvider);
+        if (is_array($latest)) {
+            $latestStatus = strtolower((string) ($latest['status'] ?? ''));
+            if (in_array($latestStatus, ['initiated', 'authorized'], true)) {
+                $raw = is_array($latest['raw_payload'] ?? null) ? $latest['raw_payload'] : [];
+                $existingUrl = (string) ($raw['checkout_url'] ?? ($raw['approval_url'] ?? ''));
+                if ($existingUrl !== '') {
+                    return [
+                        'id' => (string) ($latest['provider_ref'] ?? ''),
+                        'provider' => $resolvedProvider,
+                        'url' => $existingUrl,
+                        'status' => $latestStatus,
+                    ];
+                }
+            }
+        }
+
         $session = $provider->createCheckoutSession($order, $successUrl, $cancelUrl);
 
         $this->orderRepository->createOrderPayment(

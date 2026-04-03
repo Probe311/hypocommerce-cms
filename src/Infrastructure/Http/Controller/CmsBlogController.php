@@ -19,6 +19,8 @@ final class CmsBlogController
             return [
                 'slug' => $row['slug'],
                 'categorySlug' => $row['category_slug'],
+                'categoryName' => $row['category_name'],
+                'tags' => is_array($row['tags'] ?? null) ? $row['tags'] : [],
                 'canonicalUrl' => $baseUrl !== '' ? $baseUrl . '/blog/' . $row['category_slug'] . '/' . $row['slug'] : null,
                 'title' => $row['title'],
                 'excerpt' => $row['excerpt'],
@@ -48,6 +50,7 @@ final class CmsBlogController
             'categorySlug' => $row['category_slug'],
             'canonicalUrl' => $this->canonical('/blog/' . (string) $row['category_slug'] . '/' . (string) $row['slug']),
             'categoryName' => $row['category_name'],
+            'tags' => is_array($row['tags'] ?? null) ? $row['tags'] : [],
             'title' => $row['title'],
             'excerpt' => $row['excerpt'],
             'body' => $row['body'],
