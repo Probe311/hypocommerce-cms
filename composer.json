@@ -1,6 +1,6 @@
 {
-  "name": "nexora/nexora-cms",
-  "description": "Nexora CMS: open-source PHP e-commerce backend with GraphQL API",
+  "name": "hypocommerce/hypocommerce-cms",
+  "description": "Hypocommerce CMS: open-source PHP e-commerce backend with GraphQL and REST APIs",
   "type": "project",
   "require": {
     "php": "^8.2",

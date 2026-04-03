@@ -1,8 +1,8 @@
-# Nexora CMS
+# Hypocommerce CMS
 
-Nexora est un backend e-commerce open source en PHP, conçu comme un CMS headless pour piloter catalogue, contenu et opérations (checkout, paiements, commandes, CRM) via GraphQL et REST.
+Hypocommerce est un backend e-commerce open source en PHP, conçu comme un CMS headless pour piloter catalogue, contenu et opérations (checkout, paiements, commandes, CRM) via GraphQL et REST.
 
-![Version](https://img.shields.io/badge/version-1.0.0-2563eb)
+![Version](https://img.shields.io/badge/version-1.1.0-2563eb)
 ![PHP](https://img.shields.io/badge/PHP-%3E%3D8.2-777bb4?logo=php&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8%2B-4479a1?logo=mysql&logoColor=white)
 ![GraphQL](https://img.shields.io/badge/GraphQL-API-e10098?logo=graphql&logoColor=white)
@@ -17,7 +17,7 @@ Nexora est un backend e-commerce open source en PHP, conçu comme un CMS headles
 - **Produit**: CMS e-commerce headless orienté API
 - **Positionnement**: léger, modulaire, lisible, prêt pour self-hosting
 - **Public cible**: équipes produit/tech qui veulent un backend PHP maîtrisable sans framework monolithique
-- **Nom du projet**: Nexora (`Nexora CMS`, `Nexora Core`)
+- **Nom du projet**: Hypocommerce CMS (anciennement \"Nexora CMS\")
 
 ## Fonctionnalités clés
 
