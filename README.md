@@ -1,6 +1,6 @@
-# Hypocommerce CMS
+# Nexora CMS
 
-Hypocommerce est un backend e-commerce open source en PHP, conçu comme un CMS headless pour piloter catalogue, contenu et opérations (checkout, paiements, commandes, CRM) via GraphQL et REST.
+Nexora est un backend e-commerce open source en PHP, conçu comme un CMS headless pour piloter catalogue, contenu et opérations (checkout, paiements, commandes, CRM) via GraphQL et REST.
 
 ![Version](https://img.shields.io/badge/version-1.1.0-2563eb)
 ![PHP](https://img.shields.io/badge/PHP-%3E%3D8.2-777bb4?logo=php&logoColor=white)
@@ -17,7 +17,7 @@ Hypocommerce est un backend e-commerce open source en PHP, conçu comme un CMS h
 - **Produit**: CMS e-commerce headless orienté API
 - **Positionnement**: léger, modulaire, lisible, prêt pour self-hosting
 - **Public cible**: équipes produit/tech qui veulent un backend PHP maîtrisable sans framework monolithique
-- **Nom du projet**: Hypocommerce CMS (anciennement \"Nexora CMS\")
+- **Nom du projet**: Nexora (`Nexora CMS`, `Nexora Core`)
 
 ## Fonctionnalités clés
 
@@ -45,15 +45,6 @@ Hypocommerce est un backend e-commerce open source en PHP, conçu comme un CMS h
 Pour plus de détails: `docs/architecture.md`.
 
 ## Technologies
-
-### Labels techno
-
-![PHP](https://img.shields.io/badge/PHP-8.2+-777bb4?logo=php&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-8+-4479a1?logo=mysql&logoColor=white)
-![GraphQL](https://img.shields.io/badge/GraphQL-webonyx/graphql--php-e10098?logo=graphql&logoColor=white)
-![Symfony](https://img.shields.io/badge/Symfony-HTTP_Foundation%20%7C%20Mailer-000000?logo=symfony&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Compose-2496ed?logo=docker&logoColor=white)
-![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088ff?logo=githubactions&logoColor=white)
 
 - PHP 8.2+
 - MySQL 8+
